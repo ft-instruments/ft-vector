@@ -23,44 +23,69 @@ function arcPath(cx: number, cy: number, r: number, a0: number, a1: number): str
   return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${large} ${sweep} ${x1.toFixed(2)} ${y1.toFixed(2)}`;
 }
 
+const TICKS = 11;        // the printed scale around a small knob
+const SEGMENTS = 31;     // the LED ring around a hero
+
 export class Knob implements Control {
   el: HTMLElement;
   private value: number;
   private arc: SVGPathElement;
+  private tip: SVGRectElement;
   private pointer: SVGLineElement;
+  private leds: SVGLineElement[] = [];
   private readout: HTMLElement;
   private dragStartY = 0;
   private dragStartNorm = 0;
+  private readonly R: number;       // centre
+  private readonly r: number;       // arc radius
+  private readonly cap: number;     // cap radius
 
-  constructor(public def: ParamDef, value: number, private onChange: (v: number) => void, size = 54) {
+  /** `hero` draws a segmented LED ring instead of a continuous arc. */
+  constructor(public def: ParamDef, value: number, private onChange: (v: number) => void, size = 46, private hero = false) {
     this.value = value;
     const el = document.createElement('div');
-    el.className = 'knob';
+    el.className = hero ? 'knob hero' : 'knob';
     el.title = def.name;
-    const R = size / 2, r = R - 5;
+    el.style.setProperty('--size', `${size}px`);
+    const R = size / 2, r = R - 4, cap = hero ? r - 11 : r - 6;
+    this.R = R; this.r = r; this.cap = cap;
     const svg = document.createElementNS(SVG, 'svg');
     svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
     svg.setAttribute('width', String(size)); svg.setAttribute('height', String(size));
-    // growth-ring track
-    const track = document.createElementNS(SVG, 'path');
-    track.setAttribute('class', 'track');
-    track.setAttribute('d', arcPath(R, R, r, START, START + SWEEP));
-    const ring2 = document.createElementNS(SVG, 'circle');
-    ring2.setAttribute('class', 'ring'); ring2.setAttribute('cx', String(R)); ring2.setAttribute('cy', String(R)); ring2.setAttribute('r', String(r - 6));
-    const disc = document.createElementNS(SVG, 'circle');
-    disc.setAttribute('class', 'disc'); disc.setAttribute('cx', String(R)); disc.setAttribute('cy', String(R)); disc.setAttribute('r', String(r - 8));
-    const arc = document.createElementNS(SVG, 'path');
-    arc.setAttribute('class', 'value');
-    const pointer = document.createElementNS(SVG, 'line');
-    pointer.setAttribute('class', 'pointer');
-    svg.append(track, ring2, disc, arc, pointer);
+    const make = <K extends keyof SVGElementTagNameMap>(tag: K, cls: string, attrs: Record<string, string | number>) => {
+      const n = document.createElementNS(SVG, tag);
+      n.setAttribute('class', cls);
+      for (const k in attrs) n.setAttribute(k, String(attrs[k]));
+      return n;
+    };
+    const polar = (a: number, rad: number) => [R + Math.cos((a * Math.PI) / 180) * rad, R + Math.sin((a * Math.PI) / 180) * rad];
+    const line = (cls: string, a: number, r0: number, r1: number) => {
+      const [x1, y1] = polar(a, r0), [x2, y2] = polar(a, r1);
+      return make('line', cls, { x1: x1.toFixed(2), y1: y1.toFixed(2), x2: x2.toFixed(2), y2: y2.toFixed(2) });
+    };
+    const parts: SVGElement[] = [];
+    if (hero) {
+      for (let i = 0; i < SEGMENTS; i++) {
+        const led = line('led', START + (SWEEP * i) / (SEGMENTS - 1), r - 4, r + 2);
+        this.leds.push(led); parts.push(led);
+      }
+    } else {
+      for (let i = 0; i < TICKS; i++) parts.push(line('tick', START + (SWEEP * i) / (TICKS - 1), r + 3, r + (i % 5 === 0 ? 6 : 4.5)));
+      parts.push(make('path', 'track', { d: arcPath(R, R, r, START, START + SWEEP) }));
+    }
+    const arc = make('path', 'value', {});
+    const disc = make('circle', 'disc', { cx: R, cy: R, r: cap });
+    const knurl = make('circle', 'knurl', { cx: R, cy: R, r: cap - 1.5 });
+    const pointer = make('line', 'pointer', {});
+    const tip = make('rect', 'tip', { width: 3, height: 3 });
+    svg.append(...parts, disc, knurl, arc, pointer, tip);
     const label = document.createElement('div');
     label.className = 'label'; label.textContent = def.name;
     const readout = document.createElement('div');
     readout.className = 'readout';
     el.append(svg, label, readout);
-    this.el = el; this.arc = arc; this.pointer = pointer; this.readout = readout;
-    this.render(size);
+    this.el = el; this.arc = arc; this.tip = tip; this.pointer = pointer; this.readout = readout;
+    this.render();
 
     el.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
@@ -97,19 +122,35 @@ export class Knob implements Control {
 
   set(value: number): void { this.value = value; this.render(); }
 
-  private render(size = 54): void {
-    const R = size / 2, r = R - 5;
-    const def = this.def;
+  private render(): void {
+    const { R, r, cap, def } = this;
     const t = toNorm(def, this.value);
     const bipolar = def.min < 0 && def.max > 0;
+    const t0 = bipolar ? toNorm(def, 0) : 0;
     const a = START + SWEEP * t;
-    const from = bipolar ? START + SWEEP * toNorm(def, 0) : START;
-    this.arc.setAttribute('d', Math.abs(a - from) < 0.5 ? '' : arcPath(R, R, r, from, a));
+    if (this.hero) {
+      // light the segments between the origin and the value
+      const lo = Math.min(t0, t), hi = Math.max(t0, t);
+      this.leds.forEach((led, i) => {
+        const u = i / (SEGMENTS - 1);
+        led.classList.toggle('lit', u >= lo - 1e-6 && u <= hi + 1e-6 && (hi - lo > 0.005 || Math.abs(u - t) < 0.02));
+      });
+    } else {
+      const from = START + SWEEP * t0;
+      this.arc.setAttribute('d', Math.abs(a - from) < 0.5 ? '' : arcPath(R, R, r, from, a));
+    }
     const rad = (a * Math.PI) / 180;
-    this.pointer.setAttribute('x1', String((R + Math.cos(rad) * (r - 16)).toFixed(2)));
-    this.pointer.setAttribute('y1', String((R + Math.sin(rad) * (r - 16)).toFixed(2)));
-    this.pointer.setAttribute('x2', String((R + Math.cos(rad) * (r - 8)).toFixed(2)));
-    this.pointer.setAttribute('y2', String((R + Math.sin(rad) * (r - 8)).toFixed(2)));
+    const cos = Math.cos(rad), sin = Math.sin(rad);
+    // a hard line from inside the cap to its rim, clear of a hero's value
+    const inner = this.hero ? 0.8 : 0.25;
+    this.pointer.setAttribute('x1', (R + cos * cap * inner).toFixed(2));
+    this.pointer.setAttribute('y1', (R + sin * cap * inner).toFixed(2));
+    this.pointer.setAttribute('x2', (R + cos * (cap + 1)).toFixed(2));
+    this.pointer.setAttribute('y2', (R + sin * (cap + 1)).toFixed(2));
+    const tr = this.hero ? r + 5.5 : r;
+    this.tip.setAttribute('x', (R + cos * tr - 1.5).toFixed(2));
+    this.tip.setAttribute('y', (R + sin * tr - 1.5).toFixed(2));
+    this.tip.setAttribute('transform', `rotate(${(a + 45).toFixed(1)} ${(R + cos * tr).toFixed(2)} ${(R + sin * tr).toFixed(2)})`);
     this.readout.textContent = format(def, this.value);
   }
 }
@@ -205,17 +246,21 @@ export class Picker implements Control {
   }
 }
 
-/**
- * Enums keep the segmented row unless they have more than `segLimit`
- * choices, in which case they get a dropdown. The default keeps every enum a
- * row (Siege's bodies, Vector's chords); Mycelia passes 8 for its matrix.
- */
-export function makeControl(def: ParamDef, value: number, onChange: (v: number) => void, segLimit = Infinity): Control {
+export interface ControlOptions {
+  /** Enums with more choices than this get a dropdown; the default keeps
+   * every enum a row (Siege's bodies, Vector's chords). */
+  segLimit?: number;
+  /** Knob diameter in px; heroes are drawn larger. */
+  size?: number;
+  hero?: boolean;
+}
+
+export function makeControl(def: ParamDef, value: number, onChange: (v: number) => void, opts: ControlOptions = {}): Control {
   if (def.scale === 'enum') {
-    return (def.labels?.length ?? 0) > segLimit
+    return (def.labels?.length ?? 0) > (opts.segLimit ?? Infinity)
       ? new Picker(def, value, onChange)
       : new Selector(def, value, onChange);
   }
   if (def.scale === 'bool') return new Toggle(def, value, onChange);
-  return new Knob(def, value, onChange);
+  return new Knob(def, value, onChange, opts.size ?? (opts.hero ? 78 : 42), opts.hero);
 }

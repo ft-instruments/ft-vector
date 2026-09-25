@@ -31,6 +31,11 @@ export class Synth {
     if (this.ctx.state !== 'running') await this.ctx.resume();
   }
 
+  /** Stop producing sound until start() is called again. */
+  async suspend(): Promise<void> {
+    if (this.ctx?.state === 'running') await this.ctx.suspend();
+  }
+
   get latencyMs(): number {
     if (!this.ctx) return 0;
     return (this.ctx.baseLatency + (this.ctx.outputLatency || 0)) * 1000;

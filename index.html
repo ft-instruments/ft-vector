@@ -6,58 +6,125 @@
     <title>VECTOR</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2305060d'/%3E%3Cpath d='M2 3 L8 13 L14 3' stroke='%2319e6ff' stroke-width='2' fill='none'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Chakra+Petch:wght@500;600;700&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/ft.css" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <div class="city"></div>
+    <div class="vignette"></div>
+    <div class="grain"></div>
+
+    <!-- shared by every knob: the lit cap -->
+    <svg class="defs" width="0" height="0" aria-hidden="true">
+      <defs>
+        <radialGradient id="ftCap" cx="0.38" cy="0.3" r="0.8">
+          <stop offset="0" stop-color="#343a58" />
+          <stop offset="0.55" stop-color="#141830" />
+          <stop offset="1" stop-color="#070914" />
+        </radialGradient>
+      </defs>
+    </svg>
+
     <div id="app">
-      <header class="win">
+      <header class="bar">
         <div class="brand">
-          <h1 data-text="VECTOR">VECTOR</h1>
-          <span class="sub">digital synth <b>//</b> ft</span>
+          <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+            <path class="v2" d="M5 7 L16 26 L27 7" />
+            <path class="v1" d="M5 7 L16 26 L27 7" />
+            <path class="tick" d="M3 7h5M24 7h5" />
+          </svg>
+          <div>
+            <h1 data-text="VECTOR">VECTOR</h1>
+            <span class="sub">digital synth <b>//</b> ft</span>
+          </div>
         </div>
+
         <div class="presets">
-          <span class="prompt">load&gt;</span>
-          <button id="prev" class="ghost" title="previous preset">&lt;</button>
-          <button id="browse" title="browse the presets (`)">
-            <span class="tag" id="preset-tag"></span>
-            <span class="nm" id="preset-name"></span>
+          <button id="prev" class="round" title="previous preset">
+            <svg viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5" /></svg>
           </button>
-          <button id="next" class="ghost" title="next preset">&gt;</button>
-          <button id="spore" class="ghost" title="mutate the current patch a little">mutate</button>
-          <button id="copy" class="ghost" title="copy patch JSON to clipboard">dump</button>
+          <button id="browse" title="browse the presets (`)">
+            <span class="tag" id="preset-tag">chip</span>
+            <span class="nm" id="preset-name">Thomas</span>
+          </button>
+          <button id="next" class="round" title="next preset">
+            <svg viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5" /></svg>
+          </button>
+          <div class="actions">
+            <button id="spore" class="chip" title="mutate the current patch a little">
+              <svg viewBox="0 0 16 16"><path d="M2 8h3l2-5 2 10 2-5h3" /></svg>
+              mutate
+            </button>
+            <button id="save" class="chip" title="save this sound as a preset (⌘S)">
+              <svg viewBox="0 0 16 16"><path d="M3 2.5h8l2.5 2.5v8.5h-10.5Z" /><path d="M5.5 2.5v3.5h4.5V2.5M5.5 13.5v-4h5v4" /></svg>
+              save
+            </button>
+            <button id="copy" class="chip" title="dump the patch JSON to the clipboard">
+              <svg viewBox="0 0 16 16"><path d="M4 3.5 1.5 8 4 12.5M12 3.5 14.5 8 12 12.5M9.5 2.5l-3 11" /></svg>
+              dump
+            </button>
+          </div>
         </div>
-        <canvas id="scope" title="vector display: L vs R"></canvas>
+
+        <div class="scopewrap" title="vector display: L vs R"><canvas id="scope"></canvas></div>
+
         <div class="status">
-          <button id="start" class="primary">boot</button>
-          <select id="midi-port" title="MIDI input"><option value="all">all MIDI inputs</option></select>
-          <span id="midi-led" class="led"></span>
-          <label class="master" title="master volume"><span>vol</span><input id="master" type="range" min="0" max="1" step="0.01" value="0.7" /></label>
-          <span id="stats" class="muted"></span>
-          <button id="panic" class="ghost" title="stop all sound">halt</button>
+          <div class="io">
+            <label class="master" title="master volume">
+              <svg viewBox="0 0 16 16"><path d="M2.5 6h2.2L8 3v10L4.7 10H2.5Z" /><path d="M10.5 5.5a3.5 3.5 0 0 1 0 5M12.3 3.8a6 6 0 0 1 0 8.4" /></svg>
+              <input id="master" type="range" min="0" max="1" step="0.01" value="0.7" />
+            </label>
+            <div class="midi" title="MIDI input">
+              <span id="midi-led" class="led"></span>
+              <select id="midi-port"><option value="all">all MIDI inputs</option></select>
+            </div>
+          </div>
+          <div class="io">
+            <span id="stats" class="muted"></span>
+            <button id="panic" class="chip" title="stop all sound">halt</button>
+          </div>
+          <div class="power-wrap">
+            <button id="start" class="power" title="boot the machine">
+              <svg viewBox="0 0 16 16"><path d="M8 2v5.5" /><path d="M4.6 4.3a5 5 0 1 0 6.8 0" /></svg>
+            </button>
+            <span id="start-label">boot</span>
+          </div>
         </div>
       </header>
 
-      <nav id="tabs" class="tabs"></nav>
+      <nav id="tabs" class="tabs"><span class="tab-light"></span></nav>
       <main id="panels"></main>
 
       <footer>
-        <div class="hint muted">
-          <kbd>A</kbd>–<kbd>'</kbd> / <kbd>Z</kbd>–<kbd>/</kbd> play · <kbd>←</kbd><kbd>→</kbd> octave (<span id="octave">C4</span>) · <kbd>Shift</kbd> louder · <kbd>Space</kbd> sustain · <kbd>1</kbd>–<kbd>4</kbd> views · <kbd>`</kbd> browse presets · drag knobs, <kbd>Shift</kbd> fine, double-click reset · draw in the grids, right button clears
-        </div>
         <canvas id="keyboard"></canvas>
+        <div class="hint muted">
+          <kbd>A</kbd>–<kbd>'</kbd> <kbd>Z</kbd>–<kbd>/</kbd> play · <kbd>←</kbd><kbd>→</kbd> octave <span id="octave">C4</span> · <kbd>Shift</kbd> louder · <kbd>Space</kbd> sustain · <kbd>1</kbd>–<kbd>4</kbd> views · <kbd>`</kbd> presets · drag knobs, <kbd>Shift</kbd> fine, double-click resets · draw in the grids, right button clears
+        </div>
       </footer>
     </div>
+
     <!-- preset browser -->
     <div id="browser" class="browser" hidden>
       <div class="sheet">
         <div class="head">
           <h2>/dev/presets</h2>
-          <input id="browser-search" type="search" placeholder="search presets…" autocomplete="off" spellcheck="false" />
-          <button id="browser-close" class="ghost" title="close (Esc)">esc</button>
+          <input id="browser-search" type="search" placeholder="grep presets…" autocomplete="off" spellcheck="false" />
+          <button id="browser-save" class="chip" title="save the current sound (⌘S)">save current</button>
+          <button id="browser-close" class="chip" title="close (Esc)">esc</button>
         </div>
-        <div id="browser-list" class="list"></div>
+        <form id="savebar" class="savebar" hidden>
+          <label for="save-name">save as</label>
+          <input id="save-name" type="text" maxlength="40" autocomplete="off" spellcheck="false" placeholder="name your sound" />
+          <button id="save-ok" type="submit" class="chip primary">save</button>
+          <button id="save-cancel" type="button" class="chip">cancel</button>
+          <span id="save-msg" class="msg"></span>
+        </form>
+        <div class="split">
+          <nav id="browser-side" class="side"></nav>
+          <div id="browser-list" class="list"></div>
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

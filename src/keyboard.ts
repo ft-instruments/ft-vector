@@ -139,49 +139,66 @@ export class KeyboardView {
     const W = r.width, H = r.height;
     const ww = W / this.whiteCount;
     ctx.clearRect(0, 0, W, H);
-    // white keys
+    // white keys: rounded at the front, shaded where they go under the bed
     let wi = 0;
     for (let n = FIRST; n <= LAST; n++) {
       if (isBlack(n)) continue;
-      const x = wi * ww;
+      const x = wi * ww + 1, kw = ww - 2;
       const g = this.glow.get(n) ?? 0;
       const grad = ctx.createLinearGradient(0, 0, 0, H);
       grad.addColorStop(0, whiteA);
       grad.addColorStop(1, whiteB);
       ctx.fillStyle = grad;
-      ctx.fillRect(x + 1, 0, ww - 2, H);
+      ctx.beginPath(); ctx.roundRect(x, -6, kw, H + 6 - 1, [0, 0, 2, 2]); ctx.fill();
       if (g > 0) {
-        ctx.fillStyle = `rgba(${ph}, ${0.55 * g})`;
-        ctx.fillRect(x + 1, 0, ww - 2, H);
-        ctx.shadowColor = `rgba(${ph},0.9)`; ctx.shadowBlur = 24 * g;
-        ctx.fillStyle = `rgba(${ph}, ${0.7 * g})`;
-        ctx.fillRect(x + 1, H - 10, ww - 2, 10);
+        // the colour blooms up from the front of the key
+        const bloom = ctx.createLinearGradient(0, H, 0, 0);
+        bloom.addColorStop(0, `rgba(${ph}, ${0.85 * g})`);
+        bloom.addColorStop(0.55, `rgba(${ph}, ${0.25 * g})`);
+        bloom.addColorStop(1, `rgba(${ph}, 0)`);
+        ctx.fillStyle = bloom;
+        ctx.shadowColor = `rgba(${ph}, 0.9)`; ctx.shadowBlur = 26 * g;
+        ctx.beginPath(); ctx.roundRect(x, -6, kw, H + 6 - 1, [0, 0, 2, 2]); ctx.fill();
         ctx.shadowBlur = 0;
       }
-      ctx.fillStyle = `rgba(${ph},0.18)`;
-      ctx.fillRect(x + 1, H - 3, ww - 2, 3);
+      ctx.fillStyle = `rgba(${ph}, ${0.14 + 0.5 * g})`;
+      ctx.fillRect(x + 3, H - 4, kw - 6, 2);
       if (n % 12 === 0) {
-        ctx.fillStyle = `rgba(${ph},0.5)`;
-        ctx.font = `${Math.max(9, Math.min(12, ww * 0.5))}px ${font}`;
+        ctx.fillStyle = `rgba(${ph}, ${0.45 + 0.4 * g})`;
+        ctx.font = `${Math.max(9, Math.min(11, ww * 0.45))}px ${font}`;
         ctx.textAlign = 'center';
-        ctx.fillText(`C${n / 12 - 1}`, x + ww / 2, H - 12);
+        ctx.fillText(`C${n / 12 - 1}`, x + kw / 2, H - 12);
       }
       wi++;
     }
+    // the shadow of the key bed over the back of the keys
+    const bed = ctx.createLinearGradient(0, 0, 0, 14);
+    bed.addColorStop(0, 'rgba(0, 0, 0, 0.55)');
+    bed.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = bed; ctx.fillRect(0, 0, W, 14);
     // black keys
     for (let n = FIRST; n <= LAST; n++) {
       if (!isBlack(n)) continue;
       const cx = this.whiteIndex[n] * ww;
-      const bw = ww * 0.58;
+      const bw = ww * 0.58, bh = H * 0.6;
       const g = this.glow.get(n) ?? 0;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';                     // its shadow on the white keys
+      ctx.beginPath(); ctx.roundRect(cx - bw / 2 + 2, -4, bw, bh + 7, 1); ctx.fill();
       ctx.fillStyle = black;
-      ctx.fillRect(cx - bw / 2, 0, bw, H * 0.6);
-      ctx.fillStyle = `rgba(${ph},0.08)`;
-      ctx.fillRect(cx - bw / 2 + 1, 0, bw - 2, H * 0.6 - 4);
+      ctx.beginPath(); ctx.roundRect(cx - bw / 2, -4, bw, bh + 4, [0, 0, 1, 1]); ctx.fill();
+      const cap = ctx.createLinearGradient(0, 0, 0, bh);
+      cap.addColorStop(0, 'rgba(255, 255, 255, 0.02)');
+      cap.addColorStop(0.85, `rgba(${ph}, 0.1)`);
+      cap.addColorStop(1, 'rgba(255, 255, 255, 0.02)');
+      ctx.fillStyle = cap;
+      ctx.beginPath(); ctx.roundRect(cx - bw / 2 + 2, -4, bw - 4, bh - 2, 1); ctx.fill();
       if (g > 0) {
-        ctx.shadowColor = `rgba(${mg},0.9)`; ctx.shadowBlur = 20 * g;
-        ctx.fillStyle = `rgba(${mg}, ${0.75 * g})`;
-        ctx.fillRect(cx - bw / 2, 0, bw, H * 0.6);
+        ctx.shadowColor = `rgba(${mg}, 0.9)`; ctx.shadowBlur = 22 * g;
+        const glow = ctx.createLinearGradient(0, bh, 0, 0);
+        glow.addColorStop(0, `rgba(${mg}, ${0.95 * g})`);
+        glow.addColorStop(1, `rgba(${mg}, ${0.2 * g})`);
+        ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.roundRect(cx - bw / 2, -4, bw, bh + 4, [0, 0, 1, 1]); ctx.fill();
         ctx.shadowBlur = 0;
       }
     }

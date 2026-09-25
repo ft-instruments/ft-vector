@@ -143,19 +143,27 @@ Chrome, starts the worklet, plays a chord and checks the output level.
 
 ## UI
 
-Neon on glass: every window has an accent (cyan for the chip, magenta
-for the glass sources, violet for the registers, acid for sequencing,
-orange for the tables, red for the link), a perspective grid floor,
-Orbitron / Share Tech Mono. Four views — **voice** (machine, chord, the
-six channels; channels that are off fold to one line, click the header
-to open one), **motion** (frame clock, registers, automaton, arp,
-filter), **tables**, **link** (echo, transmission, plate); keys `1`–`4`
-switch. Registers show as live bit rows, the
-automaton scrolls like a tracker, the tables are grids you draw in, and
-the scope is an XY vector display (left vs right). Canvases read their
-window's `--accent-rgb`. Master volume sits in the header. The preset
-browser, knobs and keyboard are shared with Mycelia and Siege; the keyboard
-takes its colours from `--key-*` custom properties.
+The FT Instrument look (`src/ft.css`, shared with Mycelia) in Vector's
+skin (`src/style.css`): hard black-glass modules cut at two corners, titles
+split into cyan and magenta, a glitching logo, and the neon city grid
+scrolling underneath. Each module has its own neon (cyan for the chip,
+magenta for the glass sources, violet for the registers, acid for
+sequencing, orange for the tables, red for the link), exposed as
+`--accent` / `--accent-rgb`, which every canvas reads.
+
+Four views (`1`–`4`): **voice** (machine, chord, the six channels; channels
+that are off fold to one line), **motion** (frame clock, arp, filter,
+registers, automaton), **tables**, **link** (transmission, echo, plate).
+Most modules carry a picture of what they do, drawn with the chip's own
+maths (`src/ui/viz.ts`): duty cycles, the drawn wavetable, the LFSR, 2-op FM,
+phase distortion, the SVF response, the stepped frame echo, the gated plate,
+a sine through the link. The main knobs are LED rings. Registers show as
+live bit rows, the automaton scrolls like a tracker, the tables are grids
+you draw in, and the scope is an XY vector display.
+
+Presets: the browser (`` ` ``) has a category sidebar; **save** (⌘S) names
+the current sound and keeps it in this browser under *yours* (delete with
+×). The power button boots and halts the machine.
 
 ## Porting to a plugin (JUCE)
 
