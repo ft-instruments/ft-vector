@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VECTOR</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2305060d'/%3E%3Cpath d='M2 3 L8 13 L14 3' stroke='%2319e6ff' stroke-width='2' fill='none'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="city"></div>
+    <div id="app">
+      <header class="win">
+        <div class="brand">
+          <h1 data-text="VECTOR">VECTOR</h1>
+          <span class="sub">digital synth <b>//</b> ft</span>
+        </div>
+        <div class="presets">
+          <span class="prompt">load&gt;</span>
+          <button id="prev" class="ghost" title="previous preset">&lt;</button>
+          <select id="preset"></select>
+          <button id="next" class="ghost" title="next preset">&gt;</button>
+          <button id="spore" class="ghost" title="mutate the current patch a little">mutate</button>
+          <button id="copy" class="ghost" title="copy patch JSON to clipboard">dump</button>
+        </div>
+        <canvas id="scope" title="vector display: L vs R"></canvas>
+        <div class="status">
+          <button id="start" class="primary">boot</button>
+          <select id="midi-port" title="MIDI input"><option value="all">all MIDI inputs</option></select>
+          <span id="midi-led" class="led"></span>
+          <span id="stats" class="muted"></span>
+          <button id="panic" class="ghost" title="stop all sound">halt</button>
+        </div>
+      </header>
+
+      <nav id="tabs" class="tabs"></nav>
+      <main id="panels"></main>
+
+      <footer>
+        <div class="hint muted">
+          <kbd>A</kbd>–<kbd>'</kbd> / <kbd>Z</kbd>–<kbd>/</kbd> play · <kbd>←</kbd><kbd>→</kbd> octave (<span id="octave">C4</span>) · <kbd>Shift</kbd> louder · <kbd>Space</kbd> sustain · drag knobs, <kbd>Shift</kbd> fine, double-click reset · draw in the grids, right button clears
+        </div>
+        <canvas id="keyboard"></canvas>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
