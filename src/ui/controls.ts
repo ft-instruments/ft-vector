@@ -174,8 +174,48 @@ export class Toggle implements Control {
   }
 }
 
-export function makeControl(def: ParamDef, value: number, onChange: (v: number) => void): Control {
-  if (def.scale === 'enum') return new Selector(def, value, onChange);
+/**
+ * A dropdown, for enums with more choices than fit in a segmented row (the
+ * modulation matrix's sources and destinations).
+ */
+export class Picker implements Control {
+  el: HTMLElement;
+  private sel: HTMLSelectElement;
+
+  constructor(public def: ParamDef, value: number, onChange: (v: number) => void) {
+    const el = document.createElement('div');
+    el.className = 'picker';
+    const label = document.createElement('div');
+    label.className = 'label'; label.textContent = def.name;
+    const sel = document.createElement('select');
+    (def.labels ?? []).forEach((name, i) => {
+      const o = document.createElement('option');
+      o.value = String(i); o.textContent = name;
+      sel.append(o);
+    });
+    sel.addEventListener('change', () => onChange(Number(sel.value)));
+    el.append(label, sel);
+    this.el = el; this.sel = sel;
+    this.set(value);
+  }
+
+  set(value: number): void {
+    this.sel.value = String(Math.round(value));
+    this.el.classList.toggle('off', Math.round(value) === 0 && this.def.id.endsWith('Src'));
+  }
+}
+
+/**
+ * Enums keep the segmented row unless they have more than `segLimit`
+ * choices, in which case they get a dropdown. The default keeps every enum a
+ * row (Siege's bodies, Vector's chords); Mycelia passes 8 for its matrix.
+ */
+export function makeControl(def: ParamDef, value: number, onChange: (v: number) => void, segLimit = Infinity): Control {
+  if (def.scale === 'enum') {
+    return (def.labels?.length ?? 0) > segLimit
+      ? new Picker(def, value, onChange)
+      : new Selector(def, value, onChange);
+  }
   if (def.scale === 'bool') return new Toggle(def, value, onChange);
   return new Knob(def, value, onChange);
 }

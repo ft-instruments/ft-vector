@@ -20,7 +20,10 @@
         <div class="presets">
           <span class="prompt">load&gt;</span>
           <button id="prev" class="ghost" title="previous preset">&lt;</button>
-          <select id="preset"></select>
+          <button id="browse" title="browse the presets (`)">
+            <span class="tag" id="preset-tag"></span>
+            <span class="nm" id="preset-name"></span>
+          </button>
           <button id="next" class="ghost" title="next preset">&gt;</button>
           <button id="spore" class="ghost" title="mutate the current patch a little">mutate</button>
           <button id="copy" class="ghost" title="copy patch JSON to clipboard">dump</button>
@@ -30,6 +33,7 @@
           <button id="start" class="primary">boot</button>
           <select id="midi-port" title="MIDI input"><option value="all">all MIDI inputs</option></select>
           <span id="midi-led" class="led"></span>
+          <label class="master" title="master volume"><span>vol</span><input id="master" type="range" min="0" max="1" step="0.01" value="0.7" /></label>
           <span id="stats" class="muted"></span>
           <button id="panic" class="ghost" title="stop all sound">halt</button>
         </div>
@@ -40,10 +44,21 @@
 
       <footer>
         <div class="hint muted">
-          <kbd>A</kbd>–<kbd>'</kbd> / <kbd>Z</kbd>–<kbd>/</kbd> play · <kbd>←</kbd><kbd>→</kbd> octave (<span id="octave">C4</span>) · <kbd>Shift</kbd> louder · <kbd>Space</kbd> sustain · drag knobs, <kbd>Shift</kbd> fine, double-click reset · draw in the grids, right button clears
+          <kbd>A</kbd>–<kbd>'</kbd> / <kbd>Z</kbd>–<kbd>/</kbd> play · <kbd>←</kbd><kbd>→</kbd> octave (<span id="octave">C4</span>) · <kbd>Shift</kbd> louder · <kbd>Space</kbd> sustain · <kbd>1</kbd>–<kbd>4</kbd> views · <kbd>`</kbd> browse presets · drag knobs, <kbd>Shift</kbd> fine, double-click reset · draw in the grids, right button clears
         </div>
         <canvas id="keyboard"></canvas>
       </footer>
+    </div>
+    <!-- preset browser -->
+    <div id="browser" class="browser" hidden>
+      <div class="sheet">
+        <div class="head">
+          <h2>/dev/presets</h2>
+          <input id="browser-search" type="search" placeholder="search presets…" autocomplete="off" spellcheck="false" />
+          <button id="browser-close" class="ghost" title="close (Esc)">esc</button>
+        </div>
+        <div id="browser-list" class="list"></div>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

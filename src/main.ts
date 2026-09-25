@@ -60,6 +60,9 @@ const keyboard = new KeyboardView($<HTMLCanvasElement>('#keyboard'), handler);
 const octaveLabel = $('#octave');
 new ComputerKeys(handler, (o) => (octaveLabel.textContent = `C${o}`));
 
+const master = $<HTMLInputElement>('#master');
+master.addEventListener('input', () => { onParam('volume', Number(master.value)); controls.get('volume')?.set(Number(master.value)); });
+
 $<HTMLButtonElement>('#panic').addEventListener('click', () => {
   synth.panic();
   for (let n = FIRST; n <= LAST; n++) keyboard.setPressed(n, false);
@@ -131,16 +134,15 @@ const LAYOUT: PanelSpec[] = [
   { tab: 'link', title: 'plate', sub: 'digital reverb · out', cls: 'out', span: 4, groups: [{ ids: ['rvMix', 'rvSize', 'rvDecay', 'rvTone', 'rvGate', 'volume'] }] },
 ];
 
-const presetSel = $<HTMLSelectElement>('#preset');
-
 function onParam(id: string, v: number): void {
   values[id] = v;
   synth.setParam(id, v);
-  presetSel.value = '';
+  setCurrent(null);
   const def = PARAM_BY_ID[id];
   if (def.tab) grids.get(def.tab)?.set(def.idx!, v);
   if (id.endsWith('Level')) refreshChannels();
   refreshLoops();
+  if (id === 'volume') master.value = String(v);
 }
 
 function refreshChannels(expandOn = false): void {
@@ -182,8 +184,10 @@ for (const t of TABS) {
 }
 window.addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === 'Escape') { closeBrowser(); return; }
   const t = e.target as HTMLElement | null;
-  if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT')) return;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return;
+  if (e.key === '`') { e.preventDefault(); openBrowser(); return; }
   const i = ['1', '2', '3', '4'].indexOf(e.key);
   if (i >= 0) showTab(TABS[i].id);
 });
@@ -247,22 +251,24 @@ for (const spec of LAYOUT) {
 const CATEGORY_NAMES: Record<string, string> = {
   chip: 'chip', arp: 'arps', tracker: 'tracker leads', drum: 'drums', pad: 'pads', glass: 'glass', link: 'the link', seq: 'sequences', weird: 'weird', init: 'init',
 };
-const groups = new Map<string, HTMLOptGroupElement>();
-for (const p of PRESETS) {
-  let g = groups.get(p.tag);
-  if (!g) {
-    g = document.createElement('optgroup');
-    g.label = CATEGORY_NAMES[p.tag] ?? p.tag;
-    groups.set(p.tag, g);
-    presetSel.append(g);
-  }
-  const o = document.createElement('option');
-  o.value = p.name; o.textContent = p.name;
-  g.append(o);
+const CATEGORY_ORDER = Object.keys(CATEGORY_NAMES);
+const catRank = (tag: string) => { const i = CATEGORY_ORDER.indexOf(tag); return i < 0 ? CATEGORY_ORDER.length : i; };
+const BROWSE_ORDER = [...PRESETS].sort((a, b) => catRank(a.tag) - catRank(b.tag));
+
+const nameEl = $('#preset-name');
+const tagEl = $('#preset-tag');
+let current: string | null = null;
+
+/** Reflect the loaded preset in the header; null means the patch was edited. */
+function setCurrent(name: string | null): void {
+  if (current === name) return;
+  current = name;
+  const p = name ? PRESETS.find((x) => x.name === name) : undefined;
+  nameEl.textContent = p ? p.name : (name ?? 'custom');
+  tagEl.textContent = p ? (CATEGORY_NAMES[p.tag] ?? p.tag) : 'edited';
+  tagEl.dataset.tag = p ? p.tag : 'edited';
+  for (const [n, card] of cards) card.classList.toggle('on', n === name);
 }
-const custom = document.createElement('option');
-custom.value = ''; custom.textContent = '(custom)';
-presetSel.append(custom);
 
 function applyValues(next: ParamValues): void {
   for (const def of PARAMS) {
@@ -272,22 +278,91 @@ function applyValues(next: ParamValues): void {
   synth.loadPreset(values);
   refreshLoops();
   refreshChannels(true);
+  master.value = String(values.volume);
 }
 
 function loadPreset(name: string): void {
   const p = PRESETS.find((x) => x.name === name);
   if (!p) return;
   applyValues({ ...defaults(), ...p.values } as ParamValues);
-  presetSel.value = name;
+  setCurrent(name);
   try { localStorage.setItem('vector.preset', name); } catch { /* private mode */ }
 }
-presetSel.addEventListener('change', () => loadPreset(presetSel.value));
 const stepPreset = (d: number) => {
-  const i = PRESETS.findIndex((p) => p.name === presetSel.value);
-  loadPreset(PRESETS[(i + d + PRESETS.length) % PRESETS.length].name);
+  const i = BROWSE_ORDER.findIndex((p) => p.name === current);
+  loadPreset(BROWSE_ORDER[(i + d + BROWSE_ORDER.length) % BROWSE_ORDER.length].name);
 };
 $('#prev').addEventListener('click', () => stepPreset(-1));
 $('#next').addEventListener('click', () => stepPreset(1));
+
+// ---- the browser -----------------------------------------------------------
+
+const browserEl = $('#browser');
+const listEl = $('#browser-list');
+const searchEl = $<HTMLInputElement>('#browser-search');
+const cards = new Map<string, HTMLButtonElement>();
+
+{
+  let lastTag = '';
+  for (const p of BROWSE_ORDER) {
+    if (p.tag !== lastTag) {
+      lastTag = p.tag;
+      const h = document.createElement('div');
+      h.className = 'cat'; h.dataset.tag = p.tag;
+      h.textContent = CATEGORY_NAMES[p.tag] ?? p.tag;
+      listEl.append(h);
+    }
+    const card = document.createElement('button');
+    card.type = 'button'; card.className = 'card'; card.dataset.tag = p.tag;
+    card.dataset.search = `${p.name} ${CATEGORY_NAMES[p.tag] ?? p.tag}`.toLowerCase();
+    card.innerHTML = `<span class="nm"></span><span class="tg"></span>`;
+    card.querySelector<HTMLElement>('.nm')!.textContent = p.name;
+    card.querySelector<HTMLElement>('.tg')!.textContent = CATEGORY_NAMES[p.tag] ?? p.tag;
+    card.addEventListener('click', () => { loadPreset(p.name); closeBrowser(); });
+    listEl.append(card);
+    cards.set(p.name, card);
+  }
+}
+
+function filterBrowser(): void {
+  const q = searchEl.value.trim().toLowerCase();
+  // while searching, results come from several categories at once, so each
+  // card names its own; otherwise the heading above it already does
+  listEl.classList.toggle('searching', q.length > 0);
+  let shownInCat = 0;
+  let cat: HTMLElement | null = null;
+  for (const el of listEl.children as HTMLCollectionOf<HTMLElement>) {
+    if (el.classList.contains('cat')) {
+      if (cat) cat.hidden = shownInCat === 0;
+      cat = el; shownInCat = 0;
+      continue;
+    }
+    const hit = !q || (el.dataset.search ?? '').includes(q);
+    el.hidden = !hit;
+    if (hit) shownInCat++;
+  }
+  if (cat) cat.hidden = shownInCat === 0;
+}
+
+function openBrowser(): void {
+  browserEl.hidden = false;
+  searchEl.value = '';
+  filterBrowser();
+  searchEl.focus();
+  cards.get(current ?? '')?.scrollIntoView({ block: 'center' });
+}
+function closeBrowser(): void { browserEl.hidden = true; }
+
+$('#browse').addEventListener('click', openBrowser);
+$('#browser-close').addEventListener('click', closeBrowser);
+browserEl.addEventListener('click', (e) => { if (e.target === browserEl) closeBrowser(); });
+searchEl.addEventListener('input', filterBrowser);
+searchEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const first = [...listEl.querySelectorAll<HTMLButtonElement>('.card')].find((c) => !c.hidden);
+    if (first) first.click();
+  }
+});
 
 // "mutate": nudge a handful of continuous parameters, and flip a register op now and then
 $('#spore').addEventListener('click', () => {
@@ -301,7 +376,7 @@ $('#spore').addEventListener('click', () => {
   if (Math.random() < 0.3) next.r1Step = 1 + Math.floor(Math.random() * 255);
   if (Math.random() < 0.3) next.caRule = Math.floor(Math.random() * 256);
   applyValues(next);
-  presetSel.value = '';
+  setCurrent(null);
 });
 
 $('#copy').addEventListener('click', async () => {
@@ -315,9 +390,9 @@ let startTab = 'voice';
 try { startTab = localStorage.getItem('vector.tab') ?? startTab; } catch { /* ignore */ }
 showTab(TABS.some((t) => t.id === startTab) ? startTab : 'voice');
 
-let initial = PRESETS[0].name;
+let initial = BROWSE_ORDER[0].name;
 try { initial = localStorage.getItem('vector.preset') ?? initial; } catch { /* ignore */ }
-loadPreset(PRESETS.some((p) => p.name === initial) ? initial : PRESETS[0].name);
+loadPreset(PRESETS.some((p) => p.name === initial) ? initial : BROWSE_ORDER[0].name);
 
 // ---- MIDI ------------------------------------------------------------------
 

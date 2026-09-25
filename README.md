@@ -127,7 +127,7 @@ Chrome, starts the worklet, plays a chord and checks the output level.
 
 ## Presets
 
-67, grouped in the menu; ◂ ▸ step through them, **mutate** nudges.
+67, grouped in a searchable browser (click the preset name or press `` ` ``, `Esc` closes); `< >` step through them in browser order, **mutate** nudges.
 
 | category | presets |
 |---|---|
@@ -153,7 +153,9 @@ filter), **tables**, **link** (echo, transmission, plate); keys `1`–`4`
 switch. Registers show as live bit rows, the
 automaton scrolls like a tracker, the tables are grids you draw in, and
 the scope is an XY vector display (left vs right). Canvases read their
-window's `--accent-rgb`.
+window's `--accent-rgb`. Master volume sits in the header. The preset
+browser, knobs and keyboard are shared with Mycelia and Siege; the keyboard
+takes its colours from `--key-*` custom properties.
 
 ## Porting to a plugin (JUCE)
 

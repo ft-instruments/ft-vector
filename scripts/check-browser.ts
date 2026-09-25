@@ -81,6 +81,20 @@ async function main(): Promise<void> {
   mkdirSync('out', { recursive: true });
   writeFileSync('out/screenshot.png', Buffer.from(shot.data, 'base64'));
   console.log('wrote out/screenshot.png');
+  // the preset browser, and a count of what it holds
+  await evaluate('document.querySelector("#browse").click()');
+  await sleep(350);
+  const cards = await evaluate('document.querySelectorAll("#browser-list .card").length');
+  const cats = await evaluate('document.querySelectorAll("#browser-list .cat").length');
+  const bshot = await send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width: 1400, height: 900, scale: 1 } }) as { data: string };
+  writeFileSync('out/screenshot-browser.png', Buffer.from(bshot.data, 'base64'));
+  console.log(`browser: ${cards} presets in ${cats} categories`);
+  // and that the search narrows it
+  await evaluate('const s = document.querySelector("#browser-search"); s.value = "bell"; s.dispatchEvent(new Event("input"));');
+  await sleep(200);
+  const shown = await evaluate('[...document.querySelectorAll("#browser-list .card")].filter((c) => !c.hidden).length');
+  console.log(`search "bell" narrows to ${shown}`);
+  await evaluate('document.querySelector("#browser-close").click()');
   const errors = logs.filter((l) => l.startsWith('[error]') || l.startsWith('[exception]'));
   for (const l of logs) console.log('  console', l);
   if (errors.length) { console.error(`${errors.length} console error(s)`); process.exitCode = 1; }
