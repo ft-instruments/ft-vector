@@ -156,7 +156,8 @@ input[type="range"]::-moz-range-thumb { width: 6px; height: 14px; border: none; 
 .master input { width: 88px; }
 .midi { display: flex; align-items: center; gap: 7px; }
 #midi-port { max-width: 140px; padding-top: 3px; padding-bottom: 3px; }
-#stats { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* sized for the widest readout, "8 voices · 100% dsp", so the header holds still as the digits change */
+#stats { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; white-space: nowrap; font-variant-numeric: tabular-nums; display: inline-block; min-width: calc(19ch + 19 * 0.06em); text-align: right; }
 #panic { padding: 3px 9px; }
 #panic:hover { border-color: #ff5a6a; color: #ff8a95; }
 .power-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 60px; }
