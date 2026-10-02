@@ -355,7 +355,7 @@ export class Viz {
   }
 
   private draw(): void {
-    const r = this.el.getBoundingClientRect();
+    const r = { width: this.el.clientWidth, height: this.el.clientHeight };   // layout size: the plugin scales the page
     if (r.width === 0) return;                         // hidden tab: drawn when shown
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const W = Math.round(r.width * dpr), H = Math.round(r.height * dpr);

@@ -105,11 +105,11 @@ export const PARAMS: ParamDef[] = [
   P('fmRatio', 'ratio', 'fm', 0.25, 16, 2, 'log'),
   P('fmIndex', 'index', 'fm', 0, 1, 0.3),
   P('fmFb', 'feedback', 'fm', 0, 1, 0),
-  P('fmEnv', 'env → index', 'fm', 0, 1, 0.5),
+  P('fmEnvAmt', 'env → index', 'fm', 0, 1, 0.5),
   ...channel('pd', 0),
   P('pdShape', 'shape', 'pd', 0, 5, 0, 'enum', undefined, PD_SHAPES),
   P('pdAmt', 'distort', 'pd', 0, 1, 0.5),
-  P('pdEnv', 'env → distort', 'pd', 0, 1, 0.5),
+  P('pdEnvAmt', 'env → distort', 'pd', 0, 1, 0.5),
   // ---- drawn tables
   ...table('wv', 'wave', 'wave', 32, 0, 15, (i) => (i < 16 ? i : 31 - i)),          // NES triangle
   ...table('tvA', 'vol A', 'tabA', 16, 0, 15, (i) => Math.max(0, 15 - i * 2)),        // pluck
@@ -237,6 +237,15 @@ export interface Preset {
 const tab = (pre: string, cells: number[]): Partial<ParamValues> =>
   Object.fromEntries(cells.map((c, i) => [`${pre}${i}`, c]));
 const SINE32 = Array.from({ length: 32 }, (_, i) => Math.round(7.5 + 7.5 * Math.sin((i / 32) * Math.PI * 2)));
+/** A sum of harmonics (amplitude per harmonic), drawn into the 4-bit table at full scale. */
+const harmonics = (amps: number[]): number[] => {
+  const raw = Array.from({ length: 32 }, (_, i) => amps.reduce((s, a, h) => s + a * Math.sin(((h + 1) * i / 32) * Math.PI * 2), 0));
+  const lo = Math.min(...raw), hi = Math.max(...raw);
+  return raw.map((x) => Math.round((x - lo) / (hi - lo) * 15));
+};
+const SOFTSAW32 = harmonics([1, 1 / 2, 1 / 3, 1 / 4, 1 / 5]);       // a saw with the top rounded off
+const HOLLOW32 = harmonics([1, 0, 1 / 3, 0, 1 / 5]);                // a soft square: odd harmonics only
+const VOX32 = harmonics([0.6, 1, 0.8, 0.25, 0.15, 0.3]);            // strong 2nd and 3rd: a vowel-ish body
 const SAW32 = Array.from({ length: 32 }, (_, i) => Math.round(i / 31 * 15));
 const ORGAN32 = Array.from({ length: 32 }, (_, i) => Math.round(7.5 + 4.5 * Math.sin((i / 32) * Math.PI * 2) + 3 * Math.sin((i / 32) * Math.PI * 4)));
 
@@ -295,7 +304,7 @@ export const PRESETS: Preset[] = [
       p1Level: 0,
       wvLevel: 0.7, wvAtk: 1.2, wvDec: 2, wvSus: 0.85, wvRel: 2.5, wvPan: -0.4,
       ...tab('wv', ORGAN32),
-      fmLevel: 0.35, fmOct: 1, fmRatio: 2, fmIndex: 0.12, fmFb: 0.1, fmEnv: 0.3, fmAtk: 2.5, fmDec: 3, fmSus: 0.8, fmRel: 3, fmPan: 0.4,
+      fmLevel: 0.35, fmOct: 1, fmRatio: 2, fmIndex: 0.12, fmFb: 0.1, fmEnvAmt: 0.3, fmAtk: 2.5, fmDec: 3, fmSus: 0.8, fmRel: 3, fmPan: 0.4,
       frameHz: 30, r1Op: 0, r1Step: 12, r1Div: 2, r1Pitch: 9,
       r2Op: 4, r2Div: 8, r2Level: 0.15,
       fMode: 1, cutoff: 3200, res: 0.15,
@@ -308,7 +317,7 @@ export const PRESETS: Preset[] = [
     values: {
       mode: 1, cycle: 0,
       p1Level: 0,
-      fmLevel: 0.9, fmRatio: 3.5, fmIndex: 0.55, fmFb: 0.05, fmEnv: 0.9, fmAtk: 0.001, fmDec: 0.9, fmSus: 0, fmRel: 0.9,
+      fmLevel: 0.9, fmRatio: 3.5, fmIndex: 0.55, fmFb: 0.05, fmEnvAmt: 0.9, fmAtk: 0.001, fmDec: 0.9, fmSus: 0, fmRel: 0.9,
       lkBer: 0.55, lkBits: 12,
       rvMix: 0.2, rvDecay: 1.5, rvTone: 0.8,
     },
@@ -318,7 +327,7 @@ export const PRESETS: Preset[] = [
     values: {
       mode: 1, cycle: 0.5, clock: 6,
       p1Level: 0,
-      pdLevel: 0.8, pdShape: 3, pdAmt: 0.35, pdEnv: 0.8, pdAtk: 0.002, pdDec: 0.6, pdSus: 0.1, pdRel: 0.7, pdPan: -0.3,
+      pdLevel: 0.8, pdShape: 3, pdAmt: 0.35, pdEnvAmt: 0.8, pdAtk: 0.002, pdDec: 0.6, pdSus: 0.1, pdRel: 0.7, pdPan: -0.3,
       pdOct: 1,
       frameHz: 24, caRule: 30, caDiv: 1, caPitch: 12, caLevel: 0.3,
       lkLoss: 0.35, lkFrame: 12, lkConceal: 1,
@@ -408,7 +417,7 @@ export const PRESETS: Preset[] = [
       mode: 1, cycle: 0.2,
       p1Level: 0,
       wvLevel: 0.55, wvAtk: 0.4, wvDec: 1, wvSus: 0.9, wvRel: 1.5, ...tab('wv', SAW32),
-      pdLevel: 0.3, pdShape: 4, pdAmt: 0.3, pdEnv: 0.6, pdAtk: 0.5, pdSus: 0.8, pdRel: 1.5, pdOct: -1,
+      pdLevel: 0.3, pdShape: 4, pdAmt: 0.3, pdEnvAmt: 0.6, pdAtk: 0.5, pdSus: 0.8, pdRel: 1.5, pdOct: -1,
       fMode: 1, cutoff: 2500, res: 0.1,
       lkCodec: 1, lkKbps: 10, lkDrift: 0.5, lkLoss: 0.08, lkFrame: 20, lkConceal: 2,
       rvMix: 0.4, rvSize: 1, rvDecay: 5, rvTone: 0.35, volume: 0.6,
@@ -546,8 +555,8 @@ export const PRESETS: Preset[] = [
     values: {
       mode: 1, cycle: 0.3, clock: 7,
       p1Level: 0,
-      fmLevel: 0.5, fmRatio: 1, fmIndex: 0.18, fmFb: 0.2, fmEnv: 0.4, fmAtk: 1.5, fmDec: 2, fmSus: 0.8, fmRel: 3, fmPan: -0.5,
-      pdLevel: 0.5, pdShape: 3, pdAmt: 0.25, pdEnv: 0.5, pdAtk: 2, pdSus: 0.8, pdRel: 3, pdPan: 0.5, pdOct: 1,
+      fmLevel: 0.5, fmRatio: 1, fmIndex: 0.18, fmFb: 0.2, fmEnvAmt: 0.4, fmAtk: 1.5, fmDec: 2, fmSus: 0.8, fmRel: 3, fmPan: -0.5,
+      pdLevel: 0.5, pdShape: 3, pdAmt: 0.25, pdEnvAmt: 0.5, pdAtk: 2, pdSus: 0.8, pdRel: 3, pdPan: 0.5, pdOct: 1,
       frameHz: 20, r1Op: 4, r1Step: 91, r1Div: 2, r1Pitch: 6, r1Level: 0.2,
       caRule: 90, caDiv: 2, caCut: 0.4, fMode: 1, cutoff: 3000, res: 0.2,
       lkJitter: 0.35, lkDrift: 0.4, rvMix: 0.55, rvSize: 1, rvDecay: 6, rvTone: 0.6,
@@ -582,8 +591,8 @@ export const PRESETS: Preset[] = [
     values: {
       mode: 1, cycle: 0, clock: 7,
       p1Level: 0,
-      fmLevel: 0.85, fmRatio: 1, fmIndex: 0.35, fmFb: 0, fmEnv: 0.85, fmAtk: 0.001, fmDec: 1.2, fmSus: 0.3, fmRel: 0.6,
-      pdLevel: 0.3, pdShape: 0, pdAmt: 0.2, pdEnv: 1, pdOct: 1, pdAtk: 0.001, pdDec: 0.4, pdSus: 0, pdRel: 0.4, pdPan: 0.3,
+      fmLevel: 0.85, fmRatio: 1, fmIndex: 0.35, fmFb: 0, fmEnvAmt: 0.85, fmAtk: 0.001, fmDec: 1.2, fmSus: 0.3, fmRel: 0.6,
+      pdLevel: 0.3, pdShape: 0, pdAmt: 0.2, pdEnvAmt: 1, pdOct: 1, pdAtk: 0.001, pdDec: 0.4, pdSus: 0, pdRel: 0.4, pdPan: 0.3,
       vel: 0.8, rvMix: 0.25, rvSize: 0.6, rvDecay: 1.8, rvTone: 0.7,
     },
   },
@@ -592,7 +601,7 @@ export const PRESETS: Preset[] = [
     values: {
       mode: 1, cycle: 0, clock: 7,
       p1Level: 0,
-      fmLevel: 0.9, fmRatio: 4, fmIndex: 0.3, fmEnv: 1, fmAtk: 0.001, fmDec: 0.35, fmSus: 0, fmRel: 0.35,
+      fmLevel: 0.9, fmRatio: 4, fmIndex: 0.3, fmEnvAmt: 1, fmAtk: 0.001, fmDec: 0.35, fmSus: 0, fmRel: 0.35,
       wvLevel: 0.4, wvAtk: 0.001, wvDec: 0.2, wvSus: 0, wvRel: 0.2, ...tab('wv', SINE32),
       vel: 0.9, echoFrames: 9, echoFb: 5, echoMix: 0.3, echoPing: 1, rvMix: 0.3, rvDecay: 1.4, rvTone: 0.9,
     },
@@ -602,8 +611,8 @@ export const PRESETS: Preset[] = [
     values: {
       mode: 1, cycle: 0, clock: 7,
       p1Level: 0,
-      fmLevel: 0.8, fmRatio: 1.41, fmIndex: 0.5, fmFb: 0.15, fmEnv: 0.7, fmAtk: 0.001, fmDec: 2.5, fmSus: 0, fmRel: 2.5,
-      pdLevel: 0.35, pdShape: 5, pdAmt: 0.35, pdEnv: 0.8, pdOct: 1, pdAtk: 0.001, pdDec: 1.5, pdSus: 0, pdRel: 1.5, pdPan: -0.4,
+      fmLevel: 0.8, fmRatio: 1.41, fmIndex: 0.5, fmFb: 0.15, fmEnvAmt: 0.7, fmAtk: 0.001, fmDec: 2.5, fmSus: 0, fmRel: 2.5,
+      pdLevel: 0.35, pdShape: 5, pdAmt: 0.35, pdEnvAmt: 0.8, pdOct: 1, pdAtk: 0.001, pdDec: 1.5, pdSus: 0, pdRel: 1.5, pdPan: -0.4,
       lkJitter: 0.12, rvMix: 0.45, rvSize: 0.9, rvDecay: 4, rvTone: 0.8,
  volume: 0.55,    },
   },
@@ -612,7 +621,7 @@ export const PRESETS: Preset[] = [
     values: {
       mode: 1, cycle: 0.2, clock: 6,
       p1Level: 0,
-      pdLevel: 0.9, pdShape: 0, pdAmt: 0.85, pdEnv: 0.7, pdAtk: 0.04, pdDec: 0.5, pdSus: 0.6, pdRel: 0.3,
+      pdLevel: 0.9, pdShape: 0, pdAmt: 0.85, pdEnvAmt: 0.7, pdAtk: 0.04, pdDec: 0.5, pdSus: 0.6, pdRel: 0.3,
       fmLevel: 0.3, fmRatio: 0.5, fmIndex: 0.1, fmAtk: 0.04, fmSus: 0.7, fmRel: 0.3, fmPan: 0.5,
       frameHz: 40, r1Op: 0, r1Step: 8, r1Div: 1, r1Pitch: 7,
       echoFrames: 8, echoFb: 4, echoMix: 0.25, echoPing: 1, rvMix: 0.3, rvDecay: 1.6,
@@ -623,8 +632,8 @@ export const PRESETS: Preset[] = [
     values: {
       mode: 1, cycle: 0, clock: 7,
       p1Level: 0,
-      pdLevel: 0.8, pdShape: 4, pdAmt: 0.25, pdEnv: 1, pdAtk: 0.001, pdDec: 1.4, pdSus: 0.1, pdRel: 0.8,
-      fmLevel: 0.45, fmRatio: 7, fmIndex: 0.12, fmEnv: 1, fmAtk: 0.001, fmDec: 0.25, fmSus: 0, fmRel: 0.25, fmPan: 0.4,
+      pdLevel: 0.8, pdShape: 4, pdAmt: 0.25, pdEnvAmt: 1, pdAtk: 0.001, pdDec: 1.4, pdSus: 0.1, pdRel: 0.8,
+      fmLevel: 0.45, fmRatio: 7, fmIndex: 0.12, fmEnvAmt: 1, fmAtk: 0.001, fmDec: 0.25, fmSus: 0, fmRel: 0.25, fmPan: 0.4,
       vel: 0.9, lkBits: 13, lkDither: 1, rvMix: 0.35, rvSize: 0.8, rvDecay: 2.5, rvTone: 0.75,
     },
   },
@@ -653,7 +662,7 @@ export const PRESETS: Preset[] = [
     name: 'Dial-up', tag: 'link',
     values: {
       p1Level: 0,
-      fmLevel: 0.9, fmRatio: 5.5, fmIndex: 0.7, fmFb: 0.4, fmEnv: 0, fmAtk: 0.01, fmSus: 1, fmRel: 0.05,
+      fmLevel: 0.9, fmRatio: 5.5, fmIndex: 0.7, fmFb: 0.4, fmEnvAmt: 0, fmAtk: 0.01, fmSus: 1, fmRel: 0.05,
       frameHz: 30, r1Op: 4, r1Step: 113, r1Div: 1, r1Pitch: 900, r2Op: 3, r2Step: 29, r2Mask: 0b10110101, r2Div: 2, r2Level: 0.5,
       lkBits: 8, lkBer: 0.4, lkSpeaker: 0.8, rvMix: 0.05,
     },
@@ -722,7 +731,7 @@ export const PRESETS: Preset[] = [
     values: {
       mode: 1, cycle: 0, clock: 7,
       p1Level: 0,
-      fmLevel: 0.8, fmRatio: 3, fmIndex: 0.4, fmEnv: 1, fmAtk: 0.001, fmDec: 0.5, fmSus: 0, fmRel: 0.5,
+      fmLevel: 0.8, fmRatio: 3, fmIndex: 0.4, fmEnvAmt: 1, fmAtk: 0.001, fmDec: 0.5, fmSus: 0, fmRel: 0.5,
       frameHz: 120, frameSync: 1, tempo: 96,
       arpMode: 4, arpDiv: 12, arpOct: 2, arpGate: 0.3,
       caRule: 90, caDiv: 12, caPitch: 7, caLevel: 0.5,
@@ -760,7 +769,7 @@ export const PRESETS: Preset[] = [
       mode: 1, cycle: 0, clock: 7,
       p1Level: 0,
       wvLevel: 0.8, wvAtk: 0.002, wvDec: 0.6, wvSus: 0.2, wvRel: 0.5, ...tab('wv', SINE32),
-      pdLevel: 0.35, pdShape: 0, pdAmt: 0.3, pdEnv: 1, pdOct: 1, pdAtk: 0.002, pdDec: 0.3, pdSus: 0, pdRel: 0.3, pdPan: 0.4,
+      pdLevel: 0.35, pdShape: 0, pdAmt: 0.3, pdEnvAmt: 1, pdOct: 1, pdAtk: 0.002, pdDec: 0.3, pdSus: 0, pdRel: 0.3, pdPan: 0.4,
       frameHz: 120, frameSync: 1, tempo: 100, arpMode: 1, arpDiv: 12, arpOct: 3, arpGate: 0.9,
       echoFrames: 36, echoFb: 8, echoMix: 0.4, echoPing: 1, rvMix: 0.45, rvSize: 0.9, rvDecay: 4, rvTone: 0.7,
     },
@@ -770,7 +779,7 @@ export const PRESETS: Preset[] = [
     values: {
       mode: 1, cycle: 0, clock: 7,
       p1Level: 0,
-      fmLevel: 0.8, fmRatio: 3, fmIndex: 0.45, fmEnv: 1, fmAtk: 0.001, fmDec: 0.8, fmSus: 0, fmRel: 0.8,
+      fmLevel: 0.8, fmRatio: 3, fmIndex: 0.45, fmEnvAmt: 1, fmAtk: 0.001, fmDec: 0.8, fmSus: 0, fmRel: 0.8,
       frameHz: 120, frameSync: 1, tempo: 112, arpMode: 4, arpDiv: 6, arpOct: 3, arpGate: 0.5,
       echoFrames: 18, echoFb: 9, echoMix: 0.45, echoPing: 1, lkJitter: 0.1, rvMix: 0.5, rvSize: 1, rvDecay: 5, rvTone: 0.85,
     },
@@ -792,7 +801,7 @@ export const PRESETS: Preset[] = [
     values: {
       mode: 1, cycle: 0.3, clock: 6,
       p1Level: 0,
-      pdLevel: 0.75, pdShape: 3, pdAmt: 0.4, pdEnv: 0.9, pdAtk: 0.001, pdDec: 0.4, pdSus: 0, pdRel: 0.5,
+      pdLevel: 0.75, pdShape: 3, pdAmt: 0.4, pdEnvAmt: 0.9, pdAtk: 0.001, pdDec: 0.4, pdSus: 0, pdRel: 0.5,
       wvLevel: 0.4, wvOct: -1, wvAtk: 0.001, wvDec: 0.3, wvSus: 0, wvRel: 0.3, ...tab('wv', SINE32), wvPan: -0.4,
       frameHz: 120, frameSync: 1, tempo: 90, arpMode: 3, arpDiv: 4, arpOct: 2, arpGate: 0.5,
       lkLoss: 0.12, lkFrame: 10, lkConceal: 1, echoFrames: 24, echoFb: 8, echoMix: 0.35, echoPing: 1,
@@ -862,7 +871,7 @@ export const PRESETS: Preset[] = [
     name: 'Tracker Bell', tag: 'tracker',
     values: {
       p1Duty: 0, p1Level: 0.6, p1Env: 1, p1Rel: 0.05, p1PTab: 1, p1Oct: 1,
-      fmLevel: 0.7, fmRatio: 4, fmIndex: 0.35, fmEnv: 1, fmAtk: 0.001, fmDec: 0.6, fmSus: 0, fmRel: 0.6, fmPTab: 1,
+      fmLevel: 0.7, fmRatio: 4, fmIndex: 0.35, fmEnvAmt: 1, fmAtk: 0.001, fmDec: 0.6, fmSus: 0, fmRel: 0.6, fmPTab: 1,
       ...tab('tvA', [15, 12, 9, 7, 6, 5, 4, 3, 3, 2, 2, 1, 1, 1, 0, 0]),
       ...tab('tp', [12, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), tpLoop: 16,
       frameHz: 60, echoFrames: 18, echoFb: 8, echoMix: 0.4, echoPing: 1, rvMix: 0.4, rvSize: 0.9, rvDecay: 3, rvTone: 0.85,
@@ -929,7 +938,7 @@ export const PRESETS: Preset[] = [
     values: {
       mode: 1, cycle: 0, clock: 7,
       p1Level: 0,
-      pdLevel: 0.8, pdShape: 5, pdAmt: 0.5, pdEnv: 0.6, pdAtk: 0.3, pdDec: 1, pdSus: 0.7, pdRel: 2,
+      pdLevel: 0.8, pdShape: 5, pdAmt: 0.5, pdEnvAmt: 0.6, pdAtk: 0.3, pdDec: 1, pdSus: 0.7, pdRel: 2,
       fmLevel: 0.4, fmRatio: 0.5, fmIndex: 0.15, fmAtk: 0.3, fmSus: 0.7, fmRel: 2, fmPan: 0.5,
       lkDrift: 1, lkJitter: 0.4, lkLoss: 0.35, lkFrame: 20, lkConceal: 3,
       echoFrames: 30, echoFb: 8, echoMix: 0.35, echoPing: 1, rvMix: 0.5, rvSize: 1, rvDecay: 6, rvTone: 0.4, volume: 0.6,
@@ -952,7 +961,7 @@ export const PRESETS: Preset[] = [
       mode: 1, cycle: 0, clock: 7, glide: 0.08,
       p1Level: 0,
       wvLevel: 0.9, wvOct: -1, wvAtk: 1.5, wvDec: 2, wvSus: 0.8, wvRel: 3, ...tab('wv', SINE32),
-      pdLevel: 0.3, pdShape: 4, pdAmt: 0.15, pdEnv: 0.8, pdAtk: 2, pdSus: 0.7, pdRel: 3, pdOct: -1,
+      pdLevel: 0.3, pdShape: 4, pdAmt: 0.15, pdEnvAmt: 0.8, pdAtk: 2, pdSus: 0.7, pdRel: 3, pdOct: -1,
       frameHz: 30, r1Op: 0, r1Step: 3, r1Div: 1, r1Pitch: 30,
       lkDrift: 0.7, lkCodec: 0.4, lkKbps: 24, echoFrames: 32, echoFb: 9, echoMix: 0.3, echoPing: 1,
       rvMix: 0.6, rvSize: 1, rvDecay: 8, rvTone: 0.3, volume: 0.6,
@@ -981,6 +990,244 @@ export const PRESETS: Preset[] = [
       frameHz: 8, r1Op: 4, r1Step: 171, r1Div: 1, r1Duty: 0.7, r1Pitch: 6,
       caRule: 110, caDiv: 1, caCut: 0.7, fMode: 1, cutoff: 900, res: 0.5,
       lkBits: 10, lkDither: 2, rvMix: 0.6, rvSize: 1, rvDecay: 9, rvTone: 0.35, volume: 0.6,
+    },
+  },
+  // ---- rich: several channels stacked, detuned and spread (precision 1, so the detune beats
+  // instead of landing on the same divider step), slow register motion, echo and plate
+  {
+    name: 'Nebula Stack', tag: 'pad',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.35,
+      p1Duty: 4, p1Width: 0.34, p1Level: 0.34, p1Fine: -9, p1Pan: -0.75, p1Atk: 1.1, p1Dec: 2, p1Sus: 0.85, p1Rel: 2.8,
+      p2Duty: 4, p2Width: 0.66, p2Level: 0.34, p2Fine: 9, p2Pan: 0.75, p2Atk: 1.1, p2Dec: 2, p2Sus: 0.85, p2Rel: 2.8,
+      wvLevel: 0.5, wvOct: -1, wvFine: 4, wvAtk: 0.8, wvDec: 2, wvSus: 0.9, wvRel: 3, ...tab('wv', SOFTSAW32),
+      fmLevel: 0.2, fmOct: 1, fmRatio: 1, fmIndex: 0.08, fmEnvAmt: 0, fmAtk: 2, fmSus: 1, fmRel: 3,
+      frameHz: 40, r1Op: 0, r1Step: 5, r1Div: 1, r1Pitch: 7, r2Op: 0, r2Step: 3, r2Div: 1, r2Duty: 0.35,
+      fMode: 1, cutoff: 3600, res: 0.12,
+      lkDrift: 0.25, lkJitter: 0.08,
+      echoFrames: 18, echoFb: 6, echoMix: 0.22, echoPing: 1,
+      rvMix: 0.5, rvSize: 1, rvDecay: 6, rvTone: 0.55, volume: 0.55,
+    },
+  },
+  {
+    name: 'Aurora Grid', tag: 'pad',
+    values: {
+      mode: 1, cycle: 0.12, clock: 7, precision: 1, vel: 0.3,
+      p1Level: 0,
+      wvLevel: 0.55, wvFine: -6, wvPan: -0.55, wvAtk: 1.5, wvDec: 3, wvSus: 0.9, wvRel: 3.5, ...tab('wv', ORGAN32),
+      pdLevel: 0.4, pdShape: 3, pdAmt: 0.35, pdEnvAmt: 0.3, pdOct: 1, pdFine: 6, pdPan: 0.55, pdAtk: 2.2, pdDec: 3, pdSus: 0.8, pdRel: 3.5,
+      fmLevel: 0.35, fmOct: -1, fmRatio: 1, fmIndex: 0.14, fmFb: 0.15, fmEnvAmt: 0.2, fmAtk: 1.2, fmSus: 1, fmRel: 3,
+      frameHz: 30, r1Op: 0, r1Step: 4, r1Div: 1, r1Pitch: 6, caRule: 90, caDiv: 8, caCut: 0.18,
+      fMode: 1, cutoff: 4200, res: 0.18,
+      lkDrift: 0.3,
+      echoFrames: 24, echoFb: 7, echoMix: 0.2, echoPing: 1,
+      rvMix: 0.55, rvSize: 1, rvDecay: 7, rvTone: 0.6, volume: 0.52,
+    },
+  },
+  {
+    name: 'Glass Cathedral', tag: 'pad',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.4,
+      p1Level: 0,
+      fmLevel: 0.45, fmRatio: 3.5, fmIndex: 0.12, fmEnvAmt: 0.6, fmPan: -0.4, fmAtk: 0.6, fmDec: 4, fmSus: 0.5, fmRel: 5,
+      pdLevel: 0.28, pdShape: 5, pdAmt: 0.3, pdEnvAmt: 0.5, pdOct: 1, pdFine: 5, pdPan: 0.5, pdAtk: 1.5, pdDec: 3, pdSus: 0.6, pdRel: 5,
+      wvLevel: 0.5, wvOct: -1, wvAtk: 1.2, wvDec: 2, wvSus: 0.95, wvRel: 5, ...tab('wv', SINE32),
+      frameHz: 24, r1Op: 0, r1Step: 3, r1Div: 1, r1Pitch: 5,
+      lkJitter: 0.12,
+      echoFrames: 30, echoFb: 8, echoMix: 0.25, echoPing: 1,
+      rvMix: 0.62, rvSize: 1, rvDecay: 9, rvTone: 0.75, volume: 0.53,
+    },
+  },
+  {
+    name: 'Crystal EP', tag: 'glass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.85,
+      p1Level: 0,
+      fmLevel: 0.8, fmRatio: 1, fmIndex: 0.42, fmEnvAmt: 0.9, fmPan: -0.2, fmAtk: 0.001, fmDec: 1.8, fmSus: 0.25, fmRel: 0.7,
+      pdLevel: 0.3, pdShape: 4, pdAmt: 0.35, pdEnvAmt: 1, pdOct: 1, pdFine: 4, pdPan: 0.35, pdAtk: 0.001, pdDec: 0.35, pdSus: 0, pdRel: 0.3,
+      wvLevel: 0.35, wvFine: -4, wvPan: 0.2, wvAtk: 0.004, wvDec: 2.5, wvSus: 0.35, wvRel: 0.8, ...tab('wv', SINE32),
+      frameHz: 60, r1Op: 0, r1Step: 26, r1Div: 1, r1Level: 0.14,
+      lkDrift: 0.12,
+      echoFrames: 15, echoFb: 5, echoMix: 0.18, echoPing: 1,
+      rvMix: 0.3, rvSize: 0.75, rvDecay: 2.4, rvTone: 0.65, volume: 0.64,
+    },
+  },
+  {
+    name: 'Vapor Keys', tag: 'glass',
+    values: {
+      mode: 1, cycle: 0, clock: 6, precision: 1, vel: 0.7,
+      p1Duty: 4, p1Width: 0.3, p1Level: 0.3, p1Fine: -7, p1Pan: -0.6, p1Atk: 0.005, p1Dec: 1.2, p1Sus: 0.45, p1Rel: 0.9,
+      p2Duty: 4, p2Width: 0.7, p2Level: 0.3, p2Fine: 7, p2Pan: 0.6, p2Atk: 0.005, p2Dec: 1.2, p2Sus: 0.45, p2Rel: 0.9,
+      pdLevel: 0.55, pdShape: 0, pdAmt: 0.55, pdEnvAmt: 0.8, pdAtk: 0.002, pdDec: 0.9, pdSus: 0.3, pdRel: 0.8,
+      frameHz: 30, r2Op: 0, r2Step: 4, r2Div: 1, r2Duty: 0.3,
+      fMode: 1, cutoff: 2800, res: 0.2,
+      lkDrift: 0.35, lkBits: 12, lkDither: 2,
+      echoFrames: 12, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.35, rvSize: 0.8, rvDecay: 3, rvTone: 0.5,
+    },
+  },
+  {
+    name: 'Mallet Garden', tag: 'glass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.9,
+      p1Level: 0,
+      fmLevel: 0.7, fmRatio: 4, fmIndex: 0.3, fmEnvAmt: 1, fmPan: 0.3, fmAtk: 0.001, fmDec: 0.5, fmSus: 0, fmRel: 0.5,
+      wvLevel: 0.6, wvOct: -1, wvAtk: 0.001, wvDec: 1.3, wvSus: 0, wvRel: 1, ...tab('wv', SINE32),
+      pdLevel: 0.22, pdShape: 3, pdAmt: 0.5, pdEnvAmt: 1, pdOct: 2, pdPan: -0.45, pdAtk: 0.001, pdDec: 0.15, pdSus: 0, pdRel: 0.15,
+      echoFrames: 18, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.4, rvSize: 0.9, rvDecay: 3.2, rvTone: 0.8,
+    },
+  },
+  {
+    name: 'Neon Brass', tag: 'glass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Duty: 4, p1Width: 0.3, p1Level: 0.3, p1Fine: -8, p1Pan: -0.5, p1Atk: 0.06, p1Dec: 0.6, p1Sus: 0.75, p1Rel: 0.35,
+      p2Duty: 4, p2Width: 0.7, p2Level: 0.3, p2Fine: 8, p2Pan: 0.5, p2Atk: 0.06, p2Dec: 0.6, p2Sus: 0.75, p2Rel: 0.35,
+      pdLevel: 0.65, pdShape: 0, pdAmt: 0.9, pdEnvAmt: 0.75, pdAtk: 0.05, pdDec: 0.5, pdSus: 0.6, pdRel: 0.3,
+      wvLevel: 0.3, wvOct: -1, wvAtk: 0.04, wvSus: 0.9, wvRel: 0.3, ...tab('wv', SOFTSAW32),
+      frameHz: 50, r1Op: 0, r1Step: 20, r1Div: 1, r1Pitch: 7,
+      fMode: 1, cutoff: 2600, res: 0.18,
+      echoFrames: 10, echoFb: 4, echoMix: 0.18, echoPing: 1,
+      rvMix: 0.3, rvSize: 0.7, rvDecay: 2, volume: 0.62,
+    },
+  },
+  {
+    name: 'Hyper Saw', tag: 'tracker',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.3, glide: 0.6,
+      p1Duty: 4, p1Width: 0.5, p1Level: 0.3, p1Fine: -13, p1Pan: -0.7, p1Sus: 0.9, p1Rel: 0.25,
+      p2Duty: 4, p2Width: 0.5, p2Level: 0.3, p2Fine: 13, p2Pan: 0.7, p2Sus: 0.9, p2Rel: 0.25,
+      wvLevel: 0.4, wvFine: 5, wvSus: 0.9, wvRel: 0.25, ...tab('wv', SAW32),
+      pdLevel: 0.45, pdShape: 0, pdAmt: 0.85, pdEnvAmt: 0, pdOct: -1, pdSus: 0.9, pdRel: 0.25,
+      frameHz: 60, r1Op: 0, r1Step: 40, r1Div: 1, r1Pitch: 12, r2Op: 0, r2Step: 6, r2Div: 1, r2Duty: 0.25,
+      fMode: 1, cutoff: 5200, res: 0.15,
+      echoFrames: 12, echoFb: 6, echoMix: 0.28, echoPing: 1,
+      rvMix: 0.25, rvSize: 0.7, rvDecay: 2.2, volume: 0.6,
+    },
+  },
+  {
+    name: 'Vox Lead', tag: 'tracker',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.4, glide: 0.35,
+      p1Level: 0,
+      wvLevel: 0.7, wvAtk: 0.03, wvSus: 0.9, wvRel: 0.3, wvPTab: 1, ...tab('wv', VOX32),
+      fmLevel: 0.35, fmRatio: 2, fmIndex: 0.2, fmFb: 0.25, fmEnvAmt: 0.4, fmFine: 6, fmPan: 0.35, fmAtk: 0.05, fmSus: 0.8, fmRel: 0.3, fmPTab: 1,
+      pdLevel: 0.25, pdShape: 5, pdAmt: 0.4, pdEnvAmt: 0.5, pdFine: -6, pdPan: -0.35, pdAtk: 0.05, pdSus: 0.8, pdRel: 0.3,
+      ...tab('tp', [12, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), tpLoop: 16,
+      frameHz: 60, r1Op: 0, r1Step: 34, r1Div: 1, r1Pitch: 16,
+      fMode: 1, cutoff: 4000, res: 0.25,
+      echoFrames: 20, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.35, rvSize: 0.85, rvDecay: 3, rvTone: 0.6, volume: 0.6,
+    },
+  },
+  {
+    name: 'Sub Reactor', tag: 'bass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Duty: 1, p1Level: 0.4, p1Oct: -1, p1Fine: -6, p1Pan: -0.25, p1Atk: 0.001, p1Dec: 0.5, p1Sus: 0.6, p1Rel: 0.12,
+      p2Duty: 1, p2Level: 0.4, p2Oct: -1, p2Fine: 6, p2Pan: 0.25, p2Atk: 0.001, p2Dec: 0.5, p2Sus: 0.6, p2Rel: 0.12,
+      wvLevel: 0.85, wvOct: -2, wvAtk: 0.001, wvSus: 1, wvRel: 0.12, ...tab('wv', SINE32),
+      pdLevel: 0.4, pdShape: 4, pdAmt: 0.45, pdEnvAmt: 1, pdOct: -1, pdAtk: 0.001, pdDec: 0.22, pdSus: 0, pdRel: 0.1,
+      fMode: 1, cutoff: 1100, res: 0.35, r1Op: 0, r1Step: 2, r1Div: 1, r1Cut: 0.2, frameHz: 60,
+      rvMix: 0.08, rvDecay: 0.8, volume: 0.58,
+    },
+  },
+  {
+    name: 'Reese Circuit', tag: 'bass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.4,
+      p1Duty: 4, p1Width: 0.5, p1Level: 0.45, p1Oct: -1, p1Fine: -14, p1Pan: -0.4, p1Atk: 0.005, p1Sus: 1, p1Rel: 0.15,
+      p2Duty: 4, p2Width: 0.5, p2Level: 0.45, p2Oct: -1, p2Fine: 14, p2Pan: 0.4, p2Atk: 0.005, p2Sus: 1, p2Rel: 0.15,
+      wvLevel: 0.75, wvOct: -2, wvAtk: 0.005, wvSus: 1, wvRel: 0.15, ...tab('wv', SINE32),
+      frameHz: 30, r1Op: 0, r1Step: 3, r1Div: 1, r1Cut: 0.35, r2Op: 0, r2Step: 5, r2Div: 1, r2Duty: 0.3,
+      fMode: 1, cutoff: 800, res: 0.3,
+      lkDrift: 0.15,
+      rvMix: 0.1, rvDecay: 1, volume: 0.5,
+    },
+  },
+  {
+    name: 'FM Punch Bass', tag: 'bass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.7,
+      p1Level: 0,
+      fmLevel: 0.8, fmOct: -1, fmRatio: 1, fmIndex: 0.5, fmFb: 0.2, fmEnvAmt: 0.85, fmAtk: 0.001, fmDec: 0.35, fmSus: 0.45, fmRel: 0.1,
+      wvLevel: 0.6, wvOct: -2, wvAtk: 0.001, wvSus: 1, wvRel: 0.1, ...tab('wv', HOLLOW32),
+      nzLevel: 0.12, nzOct: 3, nzMode: 1, nzAtk: 0.001, nzDec: 0.03, nzSus: 0, nzRel: 0.02,
+      fMode: 1, cutoff: 2200, res: 0.2,
+      rvMix: 0.06, rvDecay: 0.6,
+    },
+  },
+  {
+    name: 'Prism Arp', tag: 'arp',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Level: 0,
+      pdLevel: 0.6, pdShape: 3, pdAmt: 0.45, pdEnvAmt: 0.9, pdPan: -0.35, pdAtk: 0.001, pdDec: 0.35, pdSus: 0.1, pdRel: 0.4,
+      fmLevel: 0.45, fmRatio: 2, fmIndex: 0.3, fmEnvAmt: 1, fmFine: 7, fmPan: 0.4, fmAtk: 0.001, fmDec: 0.5, fmSus: 0, fmRel: 0.5,
+      wvLevel: 0.45, wvOct: -1, wvAtk: 0.001, wvDec: 0.6, wvSus: 0.2, wvRel: 0.4, ...tab('wv', SOFTSAW32),
+      frameHz: 120, frameSync: 1, tempo: 118, arpMode: 3, arpDiv: 6, arpOct: 2, arpGate: 0.7,
+      fMode: 1, cutoff: 3000, res: 0.3, r1Op: 0, r1Step: 3, r1Div: 3, r1Cut: 0.4,
+      echoFrames: 18, echoFb: 8, echoMix: 0.35, echoPing: 1,
+      rvMix: 0.4, rvSize: 0.9, rvDecay: 3.5, rvTone: 0.7,
+    },
+  },
+  {
+    name: 'Stardust', tag: 'seq',
+    values: {
+      mode: 1, cycle: 0.2, clock: 7, precision: 1, vel: 0.5,
+      p1Level: 0,
+      fmLevel: 0.55, fmRatio: 3, fmIndex: 0.25, fmEnvAmt: 0.8, fmPan: -0.4, fmAtk: 0.002, fmDec: 0.8, fmSus: 0.35, fmRel: 1.2,
+      wvLevel: 0.45, wvFine: 5, wvPan: 0.4, wvAtk: 0.01, wvDec: 1, wvSus: 0.5, wvRel: 1.2, ...tab('wv', HOLLOW32),
+      pdLevel: 0.3, pdShape: 5, pdAmt: 0.4, pdEnvAmt: 0.6, pdOct: -1, pdAtk: 0.3, pdSus: 0.7, pdRel: 1.5,
+      chord: 6, chordSpeed: 3, chordDir: 2, chordOct: 1,
+      frameHz: 120, frameSync: 1, tempo: 110,
+      echoFrames: 18, echoFb: 8, echoMix: 0.35, echoPing: 1,
+      rvMix: 0.5, rvSize: 1, rvDecay: 5, rvTone: 0.7, volume: 0.6,
+    },
+  },
+  {
+    name: 'Arcade Orchestra', tag: 'chip',
+    values: {
+      clock: 5, precision: 0.5,
+      p1Duty: 1, p1Level: 0.6, p1Pan: -0.3, p1Atk: 0.001, p1Dec: 0.3, p1Sus: 0.7, p1Rel: 0.15,
+      p2Duty: 0, p2Level: 0.4, p2Oct: 1, p2Fine: 6, p2Pan: 0.4, p2Atk: 0.001, p2Dec: 0.3, p2Sus: 0.6, p2Rel: 0.15,
+      wvLevel: 0.7, wvOct: -1, wvSus: 0.9, wvRel: 0.1,
+      nzLevel: 0.1, nzOct: 4, nzMode: 0, nzEnv: 1, nzPan: 0.2,
+      ...tab('tvA', [15, 9, 5, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+      chord: 3, chordSpeed: 1, chordOct: 1,
+      frameHz: 60, r1Op: 0, r1Step: 36, r1Div: 1, r1Pitch: 14, r2Op: 2, r2Step: 0b00111100, r2Div: 4, r2Duty: 0.25,
+      echoFrames: 9, echoFb: 7, echoMix: 0.35, echoPing: 1,
+      rvMix: 0.22, rvSize: 0.6, rvDecay: 1.4, volume: 0.72,
+    },
+  },
+  {
+    name: 'Lo-Fi Memory', tag: 'link',
+    values: {
+      mode: 1, cycle: 0, clock: 5, precision: 1, vel: 0.5,
+      p1Duty: 4, p1Width: 0.4, p1Level: 0.3, p1Fine: -8, p1Pan: -0.6, p1Atk: 0.02, p1Dec: 1.5, p1Sus: 0.6, p1Rel: 1.2,
+      wvLevel: 0.55, wvFine: 8, wvPan: 0.6, wvAtk: 0.02, wvDec: 1.5, wvSus: 0.6, wvRel: 1.2, ...tab('wv', ORGAN32),
+      fmLevel: 0.4, fmRatio: 1, fmIndex: 0.3, fmEnvAmt: 0.8, fmAtk: 0.002, fmDec: 1.2, fmSus: 0.3, fmRel: 1,
+      frameHz: 20, r1Op: 0, r1Step: 3, r1Div: 1, r1Pitch: 14,
+      fMode: 1, cutoff: 2400, res: 0.1,
+      lkDrift: 0.6, lkCodec: 0.45, lkKbps: 40, lkBits: 11, lkDither: 2,
+      echoFrames: 15, echoFb: 7, echoMix: 0.25, echoPing: 1,
+      rvMix: 0.4, rvSize: 0.8, rvDecay: 3, rvTone: 0.4, volume: 0.64,
+    },
+  },
+  {
+    name: 'Orbital Drone', tag: 'weird',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.2,
+      p1Duty: 4, p1Width: 0.25, p1Level: 0.3, p1Oct: -1, p1Fine: -5, p1Pan: -0.7, p1Atk: 3, p1Sus: 1, p1Rel: 5,
+      p2Duty: 4, p2Width: 0.75, p2Level: 0.3, p2Oct: -1, p2Semi: 7, p2Fine: 5, p2Pan: 0.7, p2Atk: 3, p2Sus: 1, p2Rel: 5,
+      wvLevel: 0.5, wvOct: -2, wvAtk: 2, wvSus: 1, wvRel: 5, ...tab('wv', HOLLOW32),
+      fmLevel: 0.25, fmRatio: 1.5, fmIndex: 0.2, fmFb: 0.3, fmEnvAmt: 0, fmOct: 1, fmAtk: 5, fmSus: 1, fmRel: 5,
+      frameHz: 10, r1Op: 0, r1Step: 2, r1Div: 1, r1Duty: 0.5, r2Op: 0, r2Step: 3, r2Div: 1, r2Pitch: 5,
+      caRule: 90, caDiv: 4, caCut: 0.35, fMode: 1, cutoff: 1500, res: 0.4,
+      lkDrift: 0.5, lkJitter: 0.15,
+      echoFrames: 32, echoFb: 9, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.6, rvSize: 1, rvDecay: 9, rvTone: 0.4, volume: 0.5,
     },
   },
   {

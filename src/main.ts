@@ -1,4 +1,6 @@
 import { Synth } from './audio.ts';
+import { PluginSynth, inPlugin } from './plugin.ts';
+import type { WorkletStats } from './worklet/processor.ts';
 import { MidiInput } from './midi.ts';
 import { KeyboardView, ComputerKeys, FIRST, LAST } from './keyboard.ts';
 import { makeControl, type Control } from './ui/controls.ts';
@@ -8,7 +10,10 @@ import { PARAMS, PARAM_BY_ID, PRESETS, defaults, fromNorm, toNorm, type ParamVal
 
 const $ = <T extends HTMLElement>(sel: string): T => document.querySelector(sel) as T;
 
-const synth = new Synth();
+// In the plugin's WebView the host owns audio and MIDI; the page is just the editor.
+const plugin = inPlugin() ? new PluginSynth() : null;
+const synth: Synth | PluginSynth = plugin ?? new Synth();
+document.documentElement.classList.toggle('in-plugin', !!plugin);
 const values: ParamValues = defaults();
 const controls = new Map<string, Control>();
 
@@ -150,8 +155,8 @@ const LAYOUT: PanelSpec[] = [
   { tab: 'voice', channel: 'p2', title: 'pulse 2', sub: 'clock ÷ n', cls: 'chan', span: 6, viz: 'p2', groups: channelGroups('p2', ['p2Width'], ['p2Duty', 'p2Xor']) },
   { tab: 'voice', channel: 'wv', title: 'wave', sub: '32 × 4-bit', cls: 'chan', span: 6, viz: 'wv', groups: channelGroups('wv', [], []) },
   { tab: 'voice', channel: 'nz', title: 'noise', sub: '15-bit lfsr', cls: 'chan', span: 6, viz: 'nz', groups: channelGroups('nz', [], ['nzMode']) },
-  { tab: 'voice', channel: 'fm', title: 'fm', sub: '2 operators', cls: 'glass', span: 6, viz: 'fm', groups: channelGroups('fm', ['fmIndex', 'fmRatio'], ['fmFb', 'fmEnv']) },
-  { tab: 'voice', channel: 'pd', title: 'pd', sub: 'phase distortion', cls: 'glass', span: 6, viz: 'pd', groups: channelGroups('pd', ['pdAmt'], ['pdShape', 'pdEnv']) },
+  { tab: 'voice', channel: 'fm', title: 'fm', sub: '2 operators', cls: 'glass', span: 6, viz: 'fm', groups: channelGroups('fm', ['fmIndex', 'fmRatio'], ['fmFb', 'fmEnvAmt']) },
+  { tab: 'voice', channel: 'pd', title: 'pd', sub: 'phase distortion', cls: 'glass', span: 6, viz: 'pd', groups: channelGroups('pd', ['pdAmt'], ['pdShape', 'pdEnvAmt']) },
 
   // ---- motion: the frame clock and everything it ticks
   { tab: 'motion', title: 'clk', sub: 'frame clock', cls: 'sys', span: 3, viz: 'clock', groups: [{ ids: ['frameHz', 'frameSync', 'tempo'] }] },
@@ -335,7 +340,7 @@ window.addEventListener('keydown', (e) => {
 // Categories, in the order they should appear in the browser. "user" is the
 // sounds saved in this browser.
 const CATEGORY_NAMES: Record<string, string> = {
-  user: 'yours', chip: 'chip', arp: 'arps', tracker: 'tracker leads', drum: 'drums', pad: 'pads', glass: 'glass',
+  user: 'yours', chip: 'chip', arp: 'arps', tracker: 'tracker leads', bass: 'bass', drum: 'drums', pad: 'pads', glass: 'glass',
   link: 'the link', seq: 'sequences', weird: 'weird', init: 'init',
 };
 const CATEGORY_ORDER = Object.keys(CATEGORY_NAMES);
@@ -343,15 +348,38 @@ const catRank = (tag: string) => { const i = CATEGORY_ORDER.indexOf(tag); return
 
 // ---- your presets: kept in this browser's storage, as diffs from the defaults
 const USER_KEY = 'vector.user-presets';
+/**
+ * Sounds saved before `v: 2` had one value, fmEnv / pdEnv, that was both
+ * the channel's envelope mode and its env → index / distort amount. Split
+ * it the way it played, so they sound as they did.
+ */
+function migrate(p: { values: Partial<ParamValues>; v?: number }): Partial<ParamValues> {
+  const v = { ...p.values };
+  if ((p.v ?? 1) >= 2) return v;
+  for (const pre of ['fm', 'pd']) {
+    const old = v[`${pre}Env`];
+    if (old === undefined) continue;
+    v[`${pre}EnvAmt`] = old;
+    v[`${pre}Env`] = Math.trunc(old);
+  }
+  return v;
+}
+/** Your presets as stored (localStorage, or the plugin's file); malformed ones are dropped. */
+function parseUser(raw: unknown): Preset[] {
+  if (!Array.isArray(raw)) return [];
+  return (raw as { name: string; values: Partial<ParamValues>; v?: number }[])
+    .filter((p) => typeof p?.name === 'string' && p.values && typeof p.values === 'object')
+    .map((p) => ({ name: p.name, tag: 'user', values: migrate(p) }));
+}
 function readUser(): Preset[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(USER_KEY) ?? '[]') as { name: string; values: Partial<ParamValues> }[];
-    return raw.filter((p) => typeof p?.name === 'string' && p.values).map((p) => ({ name: p.name, tag: 'user', values: p.values }));
-  } catch { return []; }
+  if (plugin) return [];   // they arrive with the plugin's state
+  try { return parseUser(JSON.parse(localStorage.getItem(USER_KEY) ?? '[]')); } catch { return []; }
 }
 let userPresets = readUser();
 function writeUser(): void {
-  try { localStorage.setItem(USER_KEY, JSON.stringify(userPresets.map((p) => ({ name: p.name, values: p.values })))); }
+  const stored = userPresets.map((p) => ({ name: p.name, values: p.values, v: 2 }));
+  if (plugin) { plugin.saveUser(stored); return; }
+  try { localStorage.setItem(USER_KEY, JSON.stringify(stored)); }
   catch { /* private mode: they last until the page closes */ }
 }
 
@@ -376,14 +404,16 @@ function setCurrent(name: string | null): void {
   tagEl.textContent = p ? (CATEGORY_NAMES[p.tag] ?? p.tag) : 'edited';
   tagEl.dataset.tag = p ? p.tag : 'edited';
   for (const [n, card] of cards) card.classList.toggle('on', n === name);
+  plugin?.setCurrent(name);
 }
 
-function applyValues(next: ParamValues): void {
+/** Show a whole sound; `fromHost` when it came from the plugin and must not be sent back. */
+function applyValues(next: ParamValues, fromHost = false): void {
   for (const def of PARAMS) {
     values[def.id] = next[def.id];
     controls.get(def.id)?.set(next[def.id]);
   }
-  synth.loadPreset(values);
+  if (!fromHost) synth.loadPreset(values);
   refreshLoops();
   refreshChannels(true);
   setMaster(values.volume);
@@ -606,9 +636,11 @@ let startTab = 'voice';
 try { startTab = localStorage.getItem('vector.tab') ?? startTab; } catch { /* ignore */ }
 showTab(TABS.some((t) => t.id === startTab) ? startTab : 'voice');
 
-let initial = browseOrder.find((p) => p.tag !== 'user')!.name;
-try { initial = localStorage.getItem('vector.preset') ?? initial; } catch { /* ignore */ }
-loadPreset(findPreset(initial) ? initial : PRESETS[0].name);
+if (!plugin) {
+  let initial = browseOrder.find((p) => p.tag !== 'user')!.name;
+  try { initial = localStorage.getItem('vector.preset') ?? initial; } catch { /* ignore */ }
+  loadPreset(findPreset(initial) ? initial : PRESETS[0].name);
+}
 
 // ---- MIDI ------------------------------------------------------------------
 
@@ -632,16 +664,19 @@ midi.onPortsChanged = (ports) => {
   midiSel.value = ports.some((p) => p.id === cur) ? cur : 'all';
 };
 midiSel.addEventListener('change', () => midi.select(midiSel.value as string | 'all'));
-midi.init().then((ok) => {
-  if (!ok) midiSel.innerHTML = `<option>${MidiInput.supported ? 'MIDI denied' : 'no Web MIDI'}</option>`;
-});
+if (!plugin) {
+  midi.init().then((ok) => {
+    if (!ok) midiSel.innerHTML = `<option>${MidiInput.supported ? 'MIDI denied' : 'no Web MIDI'}</option>`;
+  });
+}
 
 // ---- stats / the live machine ---------------------------------------------
 
 const stats = $('#stats');
 let lastPeak = 0;
-synth.onStats = (s) => {
-  stats.textContent = `${s.voices} voices · ${Math.round(s.load * 100)}% dsp`;
+synth.onStats = (s: WorkletStats & { tempo?: number }) => {
+  const host = s.tempo ? ` · ${Math.round(s.tempo)} bpm` : '';
+  stats.textContent = `${s.voices} voices · ${Math.round(s.load * 100)}% dsp${host}`;
   const peak = Math.max(s.peakL, s.peakR);
   lastPeak = peak;
   scope.update(s.scope, peak);
@@ -657,3 +692,34 @@ synth.onStats = (s) => {
 };
 // expose for the headless check
 (window as unknown as { __vector: unknown }).__vector = { synth, values, peak: () => lastPeak, loadPreset };
+
+// ---- inside the plugin -------------------------------------------------------
+
+if (plugin) {
+  // the session's sound (on open, and whenever the host loads a state or a program)
+  plugin.onState = (st) => {
+    userPresets = parseUser(st.user);
+    sortPresets(); buildBrowser();
+    applyValues({ ...defaults(), ...st.values } as ParamValues, true);
+    lastLoaded = st.last || null;
+    current = '\u0000';   // force the header to redraw
+    setCurrent(st.preset || null);
+  };
+  // automation and the host's own editor
+  plugin.onParams = (changed) => {
+    for (const id in changed) {
+      const v = changed[id]!;
+      values[id] = v;
+      controls.get(id)?.set(v);
+      if (id === 'volume') setMaster(v);
+    }
+    refreshChannels();
+    refreshLoops();
+    redrawViz();
+  };
+  // the host's MIDI lights the keys, like a keyboard on the page would
+  plugin.onHostNotes = (notes) => {
+    for (const [note, , kind] of notes) keyboard.setPressed(note, kind === 0);
+  };
+  plugin.ready();
+}

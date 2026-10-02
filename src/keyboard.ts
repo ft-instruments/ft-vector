@@ -66,7 +66,7 @@ export class KeyboardView {
 
   private resize(): void {
     const dpr = window.devicePixelRatio || 1;
-    const r = this.canvas.getBoundingClientRect();
+    const r = { width: this.canvas.clientWidth, height: this.canvas.clientHeight };   // layout size: the plugin scales the page
     this.canvas.width = Math.round(r.width * dpr);
     this.canvas.height = Math.round(r.height * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -74,7 +74,7 @@ export class KeyboardView {
   }
 
   private noteAt(x: number, y: number): { note: number; velocity: number } | null {
-    const r = this.canvas.getBoundingClientRect();
+    const r = { width: this.canvas.clientWidth, height: this.canvas.clientHeight };
     const ww = r.width / this.whiteCount;
     const h = r.height;
     if (x < 0 || x >= r.width || y < 0 || y >= h) return null;
@@ -135,8 +135,7 @@ export class KeyboardView {
     const whiteA = v('--key-white-a', '#0c1a14'), whiteB = v('--key-white-b', '#16302a');
     const black = v('--key-black', '#03080a');
     const font = v('--mono', 'ui-monospace, monospace');
-    const r = this.canvas.getBoundingClientRect();
-    const W = r.width, H = r.height;
+    const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
     const ww = W / this.whiteCount;
     ctx.clearRect(0, 0, W, H);
     // white keys: rounded at the front, shaded where they go under the bed

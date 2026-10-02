@@ -8,6 +8,7 @@
 //   node scripts/render.ts spectrum 84       -> harmonics / alias of a raw 50 % pulse at that note, per internal rate
 //   node scripts/render.ts tuning            -> divider tuning error per note
 //   node scripts/render.ts codec             -> codec transparency check at the top bitrate
+//   node scripts/render.ts raw [dir]         -> <dir>/<preset>.f32, raw float32 stereo, for scripts/null-test.ts
 
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { VectorEngine } from '../src/dsp/engine.ts';
@@ -177,6 +178,19 @@ if (mode === 'note') {
     for (let i = FS / 2; i < FS; i++) { const d = w[i + lat] - dry[i]; er += d * d; sg += dry[i] * dry[i]; }
     console.log(`  ${String(kbps).padStart(3)} kbps: error ${db(Math.sqrt(er / sg))} dB`);
   }
+} else if (mode === 'raw') {
+  // the same phrases as the default mode, unquantised, to compare against the C++ engine
+  const dir = process.argv[3] ?? `${outDir}/ts`;
+  mkdirSync(dir, { recursive: true });
+  for (const pr of PRESETS) {
+    const e = new VectorEngine(FS);
+    e.loadPreset(pr.values);
+    const [L, R] = phrase(e, 8);
+    const inter = new Float32Array(L.length * 2);
+    for (let i = 0; i < L.length; i++) { inter[2 * i] = L[i]; inter[2 * i + 1] = R[i]; }
+    writeFileSync(`${dir}/${pr.name.toLowerCase().replace(/\s+/g, '-')}.f32`, new Uint8Array(inter.buffer));
+  }
+  console.log(`wrote ${PRESETS.length} presets to ${dir}`);
 } else {
   let ok = true;
   for (const pr of PRESETS) {

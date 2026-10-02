@@ -179,12 +179,12 @@ export class Voice {
         }
         case SRC_FM:
           q.fmRatio = p.fmRatio;
-          q.fmIndex = p.fmIndex * 8 * (1 - p.fmEnv + p.fmEnv * env);
+          q.fmIndex = p.fmIndex * 8 * (1 - p.fmEnvAmt + p.fmEnvAmt * env);
           q.fmFb = p.fmFb;
           break;
         case SRC_PD:
           q.pdShape = p.pdShape | 0;
-          q.pdAmt = p.pdAmt * (1 - p.pdEnv + p.pdEnv * env);
+          q.pdAmt = p.pdAmt * (1 - p.pdEnvAmt + p.pdEnvAmt * env);
           break;
         default: break;
       }

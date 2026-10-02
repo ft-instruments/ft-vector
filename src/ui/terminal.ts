@@ -8,7 +8,7 @@ function phosphor(el: HTMLElement): string {
 
 function setupCanvas(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): { W: number; H: number } {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const r = canvas.getBoundingClientRect();
+  const r = { width: canvas.clientWidth, height: canvas.clientHeight };   // layout size: the plugin scales the page
   const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -143,7 +143,8 @@ export class TableGrid {
   }
 
   private paint(e: PointerEvent): void {
-    const r = this.canvas.getBoundingClientRect();
+    // offsetX / offsetY are in layout pixels, so divide by the layout size (the plugin scales the page)
+    const r = { width: this.canvas.clientWidth, height: this.canvas.clientHeight };
     const col = Math.max(0, Math.min(this.cols - 1, Math.floor(e.offsetX / r.width * this.cols)));
     const rows = this.max - this.min + 1;
     let v = this.max - Math.floor(e.offsetY / r.height * rows);

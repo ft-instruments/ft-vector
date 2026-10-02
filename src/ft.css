@@ -394,30 +394,30 @@ footer { margin-top: 12px; }
 ::-webkit-scrollbar-corner { background: transparent; }
 
 @media (max-width: 1320px) {
-  .actions .chip { font-size: 0; gap: 0; padding: 6px 8px; }
-  .tab small { display: none; }
+  :where(:root:not(.in-plugin)) .actions .chip { font-size: 0; gap: 0; padding: 6px 8px; }
+  :where(:root:not(.in-plugin)) .tab small { display: none; }
 }
 @media (max-width: 1100px) {
-  .bar { grid-template-columns: auto 1fr; }
-  .presets { justify-self: end; }
-  .scopewrap { display: none; }
-  .bar .status { grid-column: 1 / -1; justify-content: flex-end; gap: 18px; padding-top: 10px; border-top: 1px solid var(--line); }
-  .status .io { flex-direction: row; align-items: center; }
-  .panel { grid-column: span 6 !important; }
-  .panel.wide { grid-column: span 12 !important; }
+  :where(:root:not(.in-plugin)) .bar { grid-template-columns: auto 1fr; }
+  :where(:root:not(.in-plugin)) .presets { justify-self: end; }
+  :where(:root:not(.in-plugin)) .scopewrap { display: none; }
+  :where(:root:not(.in-plugin)) .bar .status { grid-column: 1 / -1; justify-content: flex-end; gap: 18px; padding-top: 10px; border-top: 1px solid var(--line); }
+  :where(:root:not(.in-plugin)) .status .io { flex-direction: row; align-items: center; }
+  :where(:root:not(.in-plugin)) .panel { grid-column: span 6 !important; }
+  :where(:root:not(.in-plugin)) .panel.wide { grid-column: span 12 !important; }
 }
 @media (max-width: 700px) {
-  #app { padding: 10px 12px; }
-  .bar { grid-template-columns: 1fr; }
-  .presets { justify-self: stretch; flex-wrap: wrap; }
-  #browse { flex: 1; min-width: 0; }
-  .panel { grid-column: span 12 !important; }
-  .tab { padding: 9px 10px; }
-  .tab .n { display: none; }
-  .browser { padding: 10px; }
-  .browser .list { grid-template-columns: 1fr 1fr; }
-  .browser .split { grid-template-columns: 1fr; }
-  .browser .side { display: none; }
+  :where(:root:not(.in-plugin)) #app { padding: 10px 12px; }
+  :where(:root:not(.in-plugin)) .bar { grid-template-columns: 1fr; }
+  :where(:root:not(.in-plugin)) .presets { justify-self: stretch; flex-wrap: wrap; }
+  :where(:root:not(.in-plugin)) #browse { flex: 1; min-width: 0; }
+  :where(:root:not(.in-plugin)) .panel { grid-column: span 12 !important; }
+  :where(:root:not(.in-plugin)) .tab { padding: 9px 10px; }
+  :where(:root:not(.in-plugin)) .tab .n { display: none; }
+  :where(:root:not(.in-plugin)) .browser { padding: 10px; }
+  :where(:root:not(.in-plugin)) .browser .list { grid-template-columns: 1fr 1fr; }
+  :where(:root:not(.in-plugin)) .browser .split { grid-template-columns: 1fr; }
+  :where(:root:not(.in-plugin)) .browser .side { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

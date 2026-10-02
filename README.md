@@ -127,19 +127,29 @@ Chrome, starts the worklet, plays a chord and checks the output level.
 
 ## Presets
 
-67, grouped in a searchable browser (click the preset name or press `` ` ``, `Esc` closes); `< >` step through them in browser order, **mutate** nudges.
+84, grouped in a searchable browser (click the preset name or press `` ` ``, `Esc` closes); `< >` step through them in browser order, **mutate** nudges.
 
 | category | presets |
 |---|---|
-| chip | Thomas (major chord arp at 60 Hz, tri bass, LFSR hat, stepped vibrato, frame echo) · Chord Stab · Slide Bass (stepped glide, xor fifth) · Ring Lead · Metal Hat · Square Bass · Duty Phaser · Tracker Lead (pitch table) · Game Boy · Mega Lead · Octave Bass · Pixel Pluck · Boss Fight · Bubble · Laser |
-| arps | Crystal Run · Stairway · Cascade Bells · Neon Stepper · Rain Arp · Broken Arp · Choir Arp (note arp + chord arp) |
-| tracker leads | Tracker Arp (the pitch table plays the chord) · Round Lead · Warm Square · Tracker Bell · Sweep Lead · Minor Third Lead · Octave Bounce |
+| chip | Thomas (major chord arp at 60 Hz, tri bass, LFSR hat, stepped vibrato, frame echo) · Chord Stab · Slide Bass (stepped glide, xor fifth) · Ring Lead · Metal Hat · Square Bass · Duty Phaser · Tracker Lead (pitch table) · Game Boy · Mega Lead · Octave Bass · Pixel Pluck · Boss Fight · Bubble · Laser · Arcade Orchestra |
+| arps | Crystal Run · Stairway · Cascade Bells · Neon Stepper · Rain Arp · Broken Arp · Choir Arp (note arp + chord arp) · Prism Arp |
+| tracker leads | Tracker Arp (the pitch table plays the chord) · Round Lead · Warm Square · Tracker Bell · Sweep Lead · Minor Third Lead · Octave Bounce · Hyper Saw · Vox Lead |
+| bass | Sub Reactor · Reese Circuit · FM Punch Bass |
 | drums | Kick 8-bit · Snare Noise · Glitch Kit · Tom Divider — pitch tables and LFSR, the way chips did drums |
-| pads | Sleeper Pad · Neon Choir · Hologram · Cold Storage · Server Room |
-| glass | Terminal Bell · Neon Rain · DX Keys · Glass Marimba · Tubular · CZ Brass · Ice Piano |
-| the link | Corrupted Choir · Data Storm · Underwater · Dropout · Stutter Choir · Dial-up · Static Field · Ghost Signal |
-| weird | Bitwise · Modem Choir · Time Slip · Fractal · Whale · Clockwork · Neural Drone |
-| sequences | Rule 110 · Rule 30 Bass · Trance Gate · XOR Sequence · Automaton Bells · Data Runner |
+| pads | Sleeper Pad · Neon Choir · Hologram · Cold Storage · Server Room · Nebula Stack · Aurora Grid · Glass Cathedral |
+| glass | Terminal Bell · Neon Rain · DX Keys · Glass Marimba · Tubular · CZ Brass · Ice Piano · Crystal EP · Vapor Keys · Mallet Garden · Neon Brass |
+| the link | Corrupted Choir · Data Storm · Underwater · Dropout · Stutter Choir · Dial-up · Static Field · Ghost Signal · Lo-Fi Memory |
+| weird | Bitwise · Modem Choir · Time Slip · Fractal · Whale · Clockwork · Neural Drone · Orbital Drone |
+| sequences | Rule 110 · Rule 30 Bass · Trance Gate · XOR Sequence · Automaton Bells · Data Runner · Stardust (maj7 chord arp) |
+
+The 17 newest (the bass row, and the last one or few of the others) are
+stacks: three or four channels layered in
+modern mode, detuned and spread across the stereo field, with **precision**
+at 1 so the detune beats instead of landing on the same divider step (the
+divider's resolution is about 7 cents around A4, which swallows small
+detunes), slow register motion on pitch and duty, a ping-pong frame echo and
+a large plate. Three new drawn waves go with them: a soft saw, a hollow
+(odd-harmonic) square and a vowel-ish body.
 
 ## UI
 
@@ -165,18 +175,57 @@ Presets: the browser (`` ` ``) has a category sidebar; **save** (⌘S) names
 the current sound and keeps it in this browser under *yours* (delete with
 ×). The power button boots and halts the machine.
 
-## Porting to a plugin (JUCE)
+## The plugin (VST3 / AU)
 
-- `VectorEngine(sampleRate)` ↔ `prepareToPlay`
-- `noteOn / noteOff / controlChange / pitchBend` ↔ the MIDI buffer in `processBlock`
-- `process(L, R, n)` ↔ the audio buffer (any `n`; it chunks internally in 32s)
-- `setParam(id, value)` ↔ `AudioProcessorValueTreeState`, using `PARAMS` as the list
-- the frame clock syncs to the internal `tempo`; in a plugin, feed it the host tempo instead
+`plugin/` builds VECTOR as a **VST3** (macOS and Linux), an **AU** (macOS,
+for Logic) and a standalone app, with JUCE 8 (fetched by CMake), the same
+way `ft-mycelia` does.
 
-No allocation on the audio thread (typed arrays and scalars); the codec
-uses an in-place typed-array sort. About 8 % of one core for eight voices
-of the heaviest preset with the codec on, at 48 kHz in V8; the codec's
-naive O(N²) MDCT is most of it and is the first thing to FFT in C++.
+```
+plugin/build.sh      # web UI + params header + plugins, installed for this user
+```
+
+It installs to `~/Library/Audio/Plug-Ins/{VST3,Components}` on macOS and
+`~/.vst3` on Linux. On macOS check the AU with `auval -v aumu Vect Ftft`.
+On Linux it needs the usual JUCE packages plus WebKitGTK (see Mycelia's
+README for the list).
+
+- **DSP**: `plugin/Source/dsp/` is a line-for-line C++ port of `src/dsp/`
+  (`Chip.h`, `Machine.h` for the registers, tables and arp, `Voice.h`,
+  `Effects.h` for the SVF, echo and plate, `Link.h` for the link and codec,
+  `Engine.h`). Buffers the TS keeps in `Float32Array`s are `float`,
+  everything else is `double`, and `Math.round` is JS's (halves towards +∞),
+  so the two engines agree: `node scripts/null-test.ts` renders every preset
+  with both and subtracts — all 84 are bit-identical. The codec keeps its
+  naive MDCT for that reason (an FFT would round differently); in C++ it is
+  cheap anyway. Nothing allocates on the audio thread. About twice as fast
+  as V8 (`out/vector-render bench`: 5 % of a core for eight voices of
+  Sleeper Pad with the codec on).
+- **Parameters**: `Params.gen.h` is generated from `params.ts`
+  (`node scripts/gen-plugin.ts`, run by `build.sh`), so the host sees the same
+  228 parameters with the same knob curves and value text — every cell of the
+  drawn tables included, so a table can be automated. The factory bank is the
+  host's program list.
+- **UI**: the web UI itself (`dist/`, embedded in the binary) in a WebView;
+  `src/plugin.ts` stands in for the AudioWorklet and talks to
+  `PluginEditor.cpp` over JUCE's event bridge, including the live machine
+  display (registers, automaton, table playheads, packet loss). The page is
+  laid out at 1360 × 1000 and scaled to the window; the voice view with
+  several channels open is taller and scrolls. Your saved presets are a file
+  shared by every instance (`~/Library/Application Support/FT/Vector/` or
+  `~/.config/FT/Vector/`). `node scripts/check-plugin-ui.ts` checks the page
+  against a fake bridge.
+- **Clock**: the host's tempo replaces the tempo knob, and while the host
+  plays, a synced frame clock (24 ticks per beat) ticks on the host's grid.
+  The arp, the chord arp and the tables still start from the note you play,
+  not from the bar.
+
+After changing anything in `src/dsp/`, port it to `plugin/Source/dsp/` and
+run the null test.
+
+In the browser: no allocation on the audio thread (typed arrays and
+scalars); the codec uses an in-place typed-array sort. About 8 % of one core
+for eight voices of the heaviest preset with the codec on, at 48 kHz in V8.
 
 ## Known limitations / next steps
 

@@ -142,6 +142,7 @@
 [data-tag="chip"]    { --tagc: var(--cyan); }
 [data-tag="arp"]     { --tagc: var(--acid); }
 [data-tag="tracker"] { --tagc: var(--orange); }
+[data-tag="bass"]    { --tagc: #6f8bff; }
 [data-tag="drum"]    { --tagc: var(--red); }
 [data-tag="pad"]     { --tagc: var(--violet); }
 [data-tag="glass"]   { --tagc: var(--magenta); }
@@ -162,4 +163,20 @@
   background:
     repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 3px),
     radial-gradient(ellipse 130% 100% at 50% 30%, transparent 60%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+/* inside the plugin the host owns the audio device and the MIDI inputs */
+.in-plugin .power-wrap, .in-plugin .midi { display: none; }
+
+/* and the page is laid out at one size and scaled to the window (src/plugin.ts
+   sets --ui-scale and --ui-x), so a smaller window shows all of it, smaller,
+   instead of a narrower layout or a sideways scrollbar. The voice view with
+   several channels open is taller than the window and scrolls; the negative
+   margin takes back the height the scale removed, so the scroll ends at the
+   bottom of the scaled page */
+.in-plugin body { overflow-x: hidden; display: flow-root; }   /* flow-root: the margin shrinks the body instead of collapsing through it */
+.in-plugin #app {
+  width: var(--ui-w, 1360px); max-width: none; margin: 0;
+  margin-bottom: calc((var(--ui-scale, 1) - 1) * var(--ui-h, 0px));
+  transform: translateX(var(--ui-x, 0px)) scale(var(--ui-scale, 1)); transform-origin: 0 0;
 }
