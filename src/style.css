@@ -149,6 +149,9 @@
 [data-tag="link"]    { --tagc: #ff6b80; }
 [data-tag="seq"]     { --tagc: #7dffb0; }
 [data-tag="weird"]   { --tagc: #ffd23d; }
+[data-tag="pluck"]   { --tagc: color-mix(in srgb, var(--cyan) 55%, var(--magenta)); }
+[data-tag="lead"]    { --tagc: #ffe7c2; }
+[data-tag="fx"]      { --tagc: color-mix(in srgb, var(--acid) 50%, var(--cyan)); }
 [data-tag="init"]    { --tagc: var(--dim); }
 
 /* ---------- the keyboard, read by the shared keyboard.ts */

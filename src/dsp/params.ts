@@ -246,6 +246,10 @@ const harmonics = (amps: number[]): number[] => {
 const SOFTSAW32 = harmonics([1, 1 / 2, 1 / 3, 1 / 4, 1 / 5]);       // a saw with the top rounded off
 const HOLLOW32 = harmonics([1, 0, 1 / 3, 0, 1 / 5]);                // a soft square: odd harmonics only
 const VOX32 = harmonics([0.6, 1, 0.8, 0.25, 0.15, 0.3]);            // strong 2nd and 3rd: a vowel-ish body
+const STRING32 = harmonics([1, 0.55, 0.38, 0.28, 0.22, 0.17, 0.13, 0.1]);   // a brighter saw for strings and leads
+const BELL32 = harmonics([1, 0, 0.45, 0, 0, 0.3, 0, 0.2]);                // sparse partials: 1, 3, 6, 8
+const CHOIR32 = harmonics([1, 0.25, 0.65, 0.12, 0.4, 0.08, 0.2]);        // a darker vowel than VOX32
+const WARM32 = harmonics([1, 0.35, 0.12]);                               // nearly a sine, with a little body
 const SAW32 = Array.from({ length: 32 }, (_, i) => Math.round(i / 31 * 15));
 const ORGAN32 = Array.from({ length: 32 }, (_, i) => Math.round(7.5 + 4.5 * Math.sin((i / 32) * Math.PI * 2) + 3 * Math.sin((i / 32) * Math.PI * 4)));
 
@@ -1228,6 +1232,913 @@ export const PRESETS: Preset[] = [
       lkDrift: 0.5, lkJitter: 0.15,
       echoFrames: 32, echoFb: 9, echoMix: 0.3, echoPing: 1,
       rvMix: 0.6, rvSize: 1, rvDecay: 9, rvTone: 0.4, volume: 0.5,
+    },
+  },
+  // ================================================================ second bank
+  // After the first bank rather than among it, so the host's program numbers
+  // for the sounds above stay put; the browser sorts by category anyway.
+  // Almost all are modern-mode stacks at precision 1: two pulses detuned and
+  // spread wide, a drawn wave in the middle, FM or PD on top, slow register
+  // motion, a ping-pong frame echo and a large plate.
+  //
+  // The sequences use the tables as a step sequencer: frame sync on (24 frames
+  // a beat) and frames/step 3 make each table step a thirty-second, so the
+  // pitch table holds each note for two steps while volume table B accents
+  // the first of each pair. The tables restart with every note, so a held
+  // chord plays the pattern from the moment you press it.
+
+  // ---------------------------------------------------------------------- pads
+  {
+    name: 'Silk Nebula', tag: 'pad',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.3,
+      p1Duty: 4, p1Width: 0.4, p1Level: 0.32, p1Fine: -11, p1Pan: -0.8, p1Atk: 1.5, p1Dec: 2, p1Sus: 0.9, p1Rel: 4,
+      p2Duty: 4, p2Width: 0.6, p2Level: 0.32, p2Fine: 11, p2Pan: 0.8, p2Atk: 1.5, p2Dec: 2, p2Sus: 0.9, p2Rel: 4,
+      wvLevel: 0.5, wvOct: -1, wvAtk: 1.2, wvDec: 2, wvSus: 0.9, wvRel: 4, ...tab('wv', SOFTSAW32),
+      pdLevel: 0.2, pdShape: 3, pdAmt: 0.3, pdEnvAmt: 0.2, pdOct: 1, pdFine: 4, pdAtk: 2.5, pdSus: 0.9, pdRel: 4,
+      frameHz: 30, r1Op: 0, r1Step: 4, r1Div: 1, r1Pitch: 6, r2Op: 0, r2Step: 3, r2Div: 1, r2Duty: 0.3,
+      fMode: 1, cutoff: 3000, res: 0.12,
+      lkDrift: 0.2,
+      echoFrames: 24, echoFb: 7, echoMix: 0.2, echoPing: 1,
+      rvMix: 0.6, rvSize: 1, rvDecay: 8, rvTone: 0.55, volume: 0.41,
+    },
+  },
+  {
+    name: 'Choir of Machines', tag: 'pad',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.3,
+      p1Duty: 1, p1Level: 0.22, p1Fine: -8, p1Pan: -0.7, p1Atk: 1, p1Dec: 2, p1Sus: 0.85, p1Rel: 3,
+      p2Duty: 1, p2Level: 0.22, p2Fine: 8, p2Pan: 0.7, p2Atk: 1, p2Dec: 2, p2Sus: 0.85, p2Rel: 3,
+      wvLevel: 0.6, wvAtk: 0.9, wvDec: 2, wvSus: 0.9, wvRel: 3, ...tab('wv', CHOIR32),
+      fmLevel: 0.25, fmOct: -1, fmRatio: 2, fmIndex: 0.1, fmFb: 0.1, fmEnvAmt: 0, fmAtk: 1.5, fmSus: 1, fmRel: 3,
+      frameHz: 40, r1Op: 0, r1Step: 6, r1Div: 1, r1Pitch: 8, r2Op: 2, r2Step: 0b00001111, r2Div: 4, r2Duty: 0.25,
+      fMode: 1, cutoff: 2800, res: 0.15,
+      lkJitter: 0.08,
+      echoFrames: 18, echoFb: 6, echoMix: 0.18, echoPing: 1,
+      rvMix: 0.55, rvSize: 1, rvDecay: 7, rvTone: 0.55, volume: 0.45,
+    },
+  },
+  {
+    name: 'Warm Signal', tag: 'pad',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.3,
+      p1Duty: 2, p1Level: 0.28, p1Oct: -1, p1Fine: -7, p1Pan: -0.6, p1Atk: 0.8, p1Dec: 2, p1Sus: 0.9, p1Rel: 2.5,
+      p2Duty: 2, p2Level: 0.28, p2Oct: -1, p2Fine: 7, p2Pan: 0.6, p2Atk: 0.8, p2Dec: 2, p2Sus: 0.9, p2Rel: 2.5,
+      wvLevel: 0.6, wvAtk: 0.6, wvDec: 2, wvSus: 0.9, wvRel: 2.5, ...tab('wv', HOLLOW32),
+      frameHz: 24, r1Op: 0, r1Step: 3, r1Div: 1, r1Pitch: 5, r2Op: 0, r2Step: 2, r2Div: 1, r2Cut: 0.2,
+      fMode: 1, cutoff: 1800, res: 0.15,
+      lkDrift: 0.3,
+      echoFrames: 18, echoFb: 5, echoMix: 0.15, echoPing: 1,
+      rvMix: 0.5, rvSize: 0.9, rvDecay: 5, rvTone: 0.45, volume: 0.38,
+    },
+  },
+  {
+    name: 'Glacial FM', tag: 'pad',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.3,
+      p1Level: 0,
+      fmLevel: 0.5, fmRatio: 1, fmIndex: 0.15, fmFb: 0.1, fmEnvAmt: 0.2, fmPan: -0.4, fmAtk: 2, fmDec: 3, fmSus: 0.85, fmRel: 5,
+      pdLevel: 0.3, pdShape: 5, pdAmt: 0.3, pdEnvAmt: 0.3, pdOct: 1, pdFine: 6, pdPan: 0.5, pdAtk: 2.5, pdDec: 3, pdSus: 0.8, pdRel: 5,
+      wvLevel: 0.5, wvOct: -1, wvFine: -4, wvAtk: 1.5, wvSus: 1, wvRel: 5, ...tab('wv', SINE32),
+      frameHz: 20, r1Op: 0, r1Step: 3, r1Div: 1, r1Pitch: 6,
+      lkJitter: 0.1,
+      echoFrames: 30, echoFb: 8, echoMix: 0.22, echoPing: 1,
+      rvMix: 0.65, rvSize: 1, rvDecay: 10, rvTone: 0.7, volume: 0.39,
+    },
+  },
+  {
+    name: 'String Machine', tag: 'pad',
+    values: {
+      // the brighter drawn saw between two free-width pulses, the duty rotating like an ensemble
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.4,
+      p1Duty: 4, p1Width: 0.35, p1Level: 0.28, p1Fine: -9, p1Pan: -0.7, p1Atk: 0.5, p1Dec: 1, p1Sus: 0.95, p1Rel: 1.5,
+      p2Duty: 4, p2Width: 0.65, p2Level: 0.28, p2Oct: 1, p2Fine: 9, p2Pan: 0.7, p2Atk: 0.5, p2Dec: 1, p2Sus: 0.95, p2Rel: 1.5,
+      wvLevel: 0.55, wvAtk: 0.45, wvDec: 1, wvSus: 0.95, wvRel: 1.5, ...tab('wv', STRING32),
+      frameHz: 50, r1Op: 0, r1Step: 10, r1Div: 1, r1Pitch: 7, r2Op: 0, r2Step: 5, r2Div: 1, r2Duty: 0.4,
+      fMode: 1, cutoff: 4200, res: 0.08,
+      echoFrames: 12, echoFb: 5, echoMix: 0.15, echoPing: 1,
+      rvMix: 0.45, rvSize: 0.9, rvDecay: 4, rvTone: 0.6, volume: 0.48,
+    },
+  },
+  {
+    name: 'Dawn Array', tag: 'pad',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.3,
+      p1Level: 0,
+      pdLevel: 0.45, pdShape: 0, pdAmt: 0.25, pdEnvAmt: 0.5, pdFine: -6, pdPan: -0.6, pdAtk: 2, pdDec: 4, pdSus: 0.7, pdRel: 4,
+      fmLevel: 0.35, fmRatio: 2, fmIndex: 0.12, fmEnvAmt: 0.3, fmFine: 6, fmPan: 0.6, fmAtk: 2.5, fmDec: 4, fmSus: 0.8, fmRel: 4,
+      wvLevel: 0.5, wvOct: -1, wvAtk: 1.5, wvSus: 1, wvRel: 4, ...tab('wv', WARM32),
+      frameHz: 24, r1Op: 0, r1Step: 3, r1Div: 1, r1Pitch: 5, caRule: 90, caDiv: 8, caCut: 0.15,
+      fMode: 1, cutoff: 3200, res: 0.12,
+      lkDrift: 0.2,
+      echoFrames: 24, echoFb: 7, echoMix: 0.2, echoPing: 1,
+      rvMix: 0.6, rvSize: 1, rvDecay: 8, rvTone: 0.6, volume: 0.45,
+    },
+  },
+  {
+    name: 'Vapor Halo', tag: 'pad',
+    values: {
+      // a light touch of the codec makes the top shimmer like a stream
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.3,
+      p1Duty: 4, p1Width: 0.3, p1Level: 0.25, p1Fine: -10, p1Pan: -0.8, p1Atk: 1.8, p1Sus: 0.9, p1Rel: 4,
+      p2Duty: 4, p2Width: 0.7, p2Level: 0.25, p2Fine: 10, p2Pan: 0.8, p2Atk: 1.8, p2Sus: 0.9, p2Rel: 4,
+      wvLevel: 0.55, wvAtk: 1.5, wvSus: 1, wvRel: 4, ...tab('wv', ORGAN32),
+      fmLevel: 0.2, fmOct: 1, fmRatio: 1, fmIndex: 0.08, fmEnvAmt: 0, fmAtk: 3, fmSus: 1, fmRel: 4,
+      frameHz: 30, r1Op: 0, r1Step: 4, r1Div: 1, r1Pitch: 7, r2Op: 0, r2Step: 2, r2Div: 1, r2Duty: 0.35,
+      fMode: 1, cutoff: 5000, res: 0.1,
+      lkCodec: 0.3, lkKbps: 64,
+      echoFrames: 30, echoFb: 7, echoMix: 0.2, echoPing: 1,
+      rvMix: 0.6, rvSize: 1, rvDecay: 9, rvTone: 0.65, volume: 0.45,
+    },
+  },
+  {
+    name: 'Deep Field', tag: 'pad',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.2,
+      p1Duty: 2, p1Level: 0.25, p1Oct: -1, p1Fine: -6, p1Pan: -0.7, p1Atk: 3, p1Sus: 1, p1Rel: 6,
+      p2Duty: 2, p2Level: 0.25, p2Oct: -1, p2Semi: 7, p2Fine: 6, p2Pan: 0.7, p2Atk: 3, p2Sus: 1, p2Rel: 6,
+      wvLevel: 0.6, wvOct: -2, wvAtk: 2.5, wvSus: 1, wvRel: 6, ...tab('wv', WARM32),
+      fmLevel: 0.15, fmOct: 1, fmRatio: 1, fmIndex: 0.1, fmEnvAmt: 0, fmAtk: 5, fmSus: 1, fmRel: 6,
+      frameHz: 12, r1Op: 0, r1Step: 2, r1Div: 1, r1Pitch: 5, r2Op: 0, r2Step: 2, r2Div: 1, r2Cut: 0.3,
+      fMode: 1, cutoff: 1200, res: 0.25,
+      lkDrift: 0.35,
+      echoFrames: 32, echoFb: 8, echoMix: 0.2, echoPing: 1,
+      rvMix: 0.65, rvSize: 1, rvDecay: 10, rvTone: 0.35, volume: 0.42,
+    },
+  },
+  // ----------------------------------------------------------- glass keys & bells
+  {
+    name: 'Glass Rhodes', tag: 'glass',
+    values: {
+      // an FM tine, a sine body under it, and a stepped tremolo from register 1
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.8,
+      p1Level: 0,
+      fmLevel: 0.75, fmRatio: 1, fmIndex: 0.4, fmEnvAmt: 0.9, fmPan: -0.25, fmAtk: 0.001, fmDec: 2, fmSus: 0.2, fmRel: 0.8,
+      wvLevel: 0.45, wvFine: -5, wvPan: 0.25, wvAtk: 0.003, wvDec: 2.5, wvSus: 0.3, wvRel: 0.8, ...tab('wv', SINE32),
+      pdLevel: 0.2, pdShape: 4, pdAmt: 0.3, pdEnvAmt: 1, pdOct: 2, pdAtk: 0.001, pdDec: 0.2, pdSus: 0, pdRel: 0.2,
+      frameHz: 60, r1Op: 0, r1Step: 24, r1Div: 1, r1Level: 0.18,
+      lkDrift: 0.1,
+      echoFrames: 15, echoFb: 5, echoMix: 0.15, echoPing: 1,
+      rvMix: 0.3, rvSize: 0.75, rvDecay: 2.5, rvTone: 0.6, volume: 0.54,
+    },
+  },
+  {
+    name: 'Celesta Array', tag: 'glass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.7,
+      p1Level: 0,
+      fmLevel: 0.6, fmRatio: 4, fmIndex: 0.25, fmEnvAmt: 1, fmOct: 1, fmPan: 0.3, fmAtk: 0.001, fmDec: 0.8, fmSus: 0, fmRel: 0.8,
+      wvLevel: 0.55, wvOct: 1, wvFine: 4, wvPan: -0.3, wvAtk: 0.001, wvDec: 1.5, wvSus: 0, wvRel: 1.2, ...tab('wv', BELL32),
+      echoFrames: 18, echoFb: 7, echoMix: 0.28, echoPing: 1,
+      rvMix: 0.45, rvSize: 0.9, rvDecay: 4, rvTone: 0.8, volume: 0.64,
+    },
+  },
+  {
+    name: 'Crystal Harp', tag: 'glass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.7,
+      p1Level: 0,
+      pdLevel: 0.6, pdShape: 4, pdAmt: 0.3, pdEnvAmt: 1, pdPan: -0.3, pdAtk: 0.001, pdDec: 1.6, pdSus: 0, pdRel: 1.5,
+      fmLevel: 0.4, fmRatio: 2, fmIndex: 0.2, fmEnvAmt: 1, fmFine: 6, fmPan: 0.35, fmAtk: 0.001, fmDec: 1.2, fmSus: 0, fmRel: 1.2,
+      wvLevel: 0.35, wvOct: -1, wvAtk: 0.002, wvDec: 2, wvSus: 0, wvRel: 1.5, ...tab('wv', SINE32),
+      echoFrames: 24, echoFb: 7, echoMix: 0.25, echoPing: 1,
+      rvMix: 0.5, rvSize: 1, rvDecay: 5, rvTone: 0.7, volume: 0.65,
+    },
+  },
+  {
+    name: 'Bell Garden', tag: 'glass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Level: 0,
+      fmLevel: 0.6, fmRatio: 3.5, fmIndex: 0.35, fmFb: 0.05, fmEnvAmt: 0.8, fmPan: -0.4, fmAtk: 0.001, fmDec: 3, fmSus: 0, fmRel: 3,
+      pdLevel: 0.3, pdShape: 3, pdAmt: 0.4, pdEnvAmt: 0.8, pdOct: 2, pdFine: 7, pdPan: 0.45, pdAtk: 0.001, pdDec: 1.5, pdSus: 0, pdRel: 2,
+      wvLevel: 0.35, wvAtk: 0.002, wvDec: 3, wvSus: 0, wvRel: 3, ...tab('wv', BELL32),
+      frameHz: 30, r1Op: 0, r1Step: 3, r1Div: 1, r1Pitch: 4,
+      echoFrames: 30, echoFb: 8, echoMix: 0.25, echoPing: 1,
+      rvMix: 0.55, rvSize: 1, rvDecay: 6, rvTone: 0.8, volume: 0.48,
+    },
+  },
+  {
+    name: 'Velvet EP', tag: 'glass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.8,
+      p1Level: 0,
+      wvLevel: 0.6, wvAtk: 0.003, wvDec: 3, wvSus: 0.2, wvRel: 0.6, ...tab('wv', WARM32),
+      fmLevel: 0.45, fmRatio: 1, fmIndex: 0.25, fmEnvAmt: 0.8, fmFine: 5, fmPan: 0.3, fmAtk: 0.001, fmDec: 1.4, fmSus: 0.15, fmRel: 0.6,
+      pdLevel: 0.2, pdShape: 0, pdAmt: 0.2, pdEnvAmt: 1, pdFine: -5, pdPan: -0.3, pdAtk: 0.001, pdDec: 0.8, pdSus: 0, pdRel: 0.5,
+      frameHz: 50, r1Op: 0, r1Step: 18, r1Div: 1, r1Level: 0.15,
+      fMode: 1, cutoff: 3600, res: 0.08,
+      lkDrift: 0.12,
+      echoFrames: 18, echoFb: 5, echoMix: 0.15, echoPing: 1,
+      rvMix: 0.3, rvSize: 0.7, rvDecay: 2.2, rvTone: 0.55, volume: 0.84,
+    },
+  },
+  {
+    name: 'Music Box Grid', tag: 'glass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Level: 0,
+      fmLevel: 0.55, fmRatio: 5, fmIndex: 0.2, fmEnvAmt: 1, fmOct: 1, fmAtk: 0.001, fmDec: 1.2, fmSus: 0, fmRel: 1.2,
+      wvLevel: 0.4, wvOct: 2, wvFine: 6, wvPan: 0.4, wvAtk: 0.001, wvDec: 0.9, wvSus: 0, wvRel: 0.9, ...tab('wv', SINE32),
+      frameHz: 40, r1Op: 0, r1Step: 4, r1Div: 1, r1Pitch: 5,
+      echoFrames: 12, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.45, rvSize: 0.85, rvDecay: 3.5, rvTone: 0.8, volume: 0.66,
+    },
+  },
+  {
+    name: 'Tine Kalimba', tag: 'glass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.8,
+      p1Level: 0,
+      fmLevel: 0.65, fmRatio: 3, fmIndex: 0.3, fmEnvAmt: 1, fmAtk: 0.001, fmDec: 0.5, fmSus: 0, fmRel: 0.5,
+      pdLevel: 0.35, pdShape: 5, pdAmt: 0.35, pdEnvAmt: 1, pdOct: 1, pdPan: 0.35, pdAtk: 0.001, pdDec: 0.25, pdSus: 0, pdRel: 0.3,
+      wvLevel: 0.3, wvAtk: 0.001, wvDec: 0.7, wvSus: 0, wvRel: 0.5, wvPan: -0.3, ...tab('wv', SINE32),
+      echoFrames: 18, echoFb: 6, echoMix: 0.25, echoPing: 1,
+      rvMix: 0.35, rvSize: 0.75, rvDecay: 2.5, rvTone: 0.7, volume: 0.86,
+    },
+  },
+  // -------------------------------------------------------------------- plucks
+  {
+    name: 'Neon Pluck', tag: 'pluck',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Duty: 4, p1Width: 0.35, p1Level: 0.3, p1Fine: -9, p1Pan: -0.7, p1Atk: 0.001, p1Dec: 0.45, p1Sus: 0, p1Rel: 0.4,
+      p2Duty: 4, p2Width: 0.65, p2Level: 0.3, p2Fine: 9, p2Pan: 0.7, p2Atk: 0.001, p2Dec: 0.45, p2Sus: 0, p2Rel: 0.4,
+      pdLevel: 0.5, pdShape: 0, pdAmt: 0.2, pdEnvAmt: 1, pdAtk: 0.001, pdDec: 0.3, pdSus: 0, pdRel: 0.3,
+      fMode: 1, cutoff: 3200, res: 0.2,
+      echoFrames: 18, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.4, rvSize: 0.85, rvDecay: 3, rvTone: 0.65, volume: 1,
+    },
+  },
+  {
+    name: 'Glass Pluck', tag: 'pluck',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.7,
+      p1Level: 0,
+      fmLevel: 0.65, fmRatio: 2, fmIndex: 0.5, fmEnvAmt: 1, fmPan: -0.25, fmAtk: 0.001, fmDec: 0.4, fmSus: 0, fmRel: 0.4,
+      wvLevel: 0.45, wvFine: 5, wvPan: 0.3, wvAtk: 0.001, wvDec: 0.8, wvSus: 0, wvRel: 0.6, ...tab('wv', SINE32),
+      echoFrames: 18, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.4, rvSize: 0.85, rvDecay: 3, rvTone: 0.75, volume: 0.79,
+    },
+  },
+  {
+    name: 'Harp Stack', tag: 'pluck',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Duty: 0, p1Level: 0.15, p1Oct: 1, p1Fine: 6, p1Pan: 0.5, p1Atk: 0.001, p1Dec: 0.6, p1Sus: 0, p1Rel: 0.6,
+      pdLevel: 0.6, pdShape: 5, pdAmt: 0.3, pdEnvAmt: 1, pdPan: -0.3, pdAtk: 0.001, pdDec: 1.4, pdSus: 0, pdRel: 1.2,
+      wvLevel: 0.4, wvOct: -1, wvAtk: 0.002, wvDec: 1.6, wvSus: 0, wvRel: 1.2, ...tab('wv', WARM32),
+      echoFrames: 24, echoFb: 6, echoMix: 0.22, echoPing: 1,
+      rvMix: 0.45, rvSize: 0.9, rvDecay: 4, rvTone: 0.65, volume: 0.76,
+    },
+  },
+  {
+    name: 'Data Koto', tag: 'pluck',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.7,
+      p1Level: 0,
+      pdLevel: 0.65, pdShape: 4, pdAmt: 0.45, pdEnvAmt: 1, pdAtk: 0.001, pdDec: 0.9, pdSus: 0, pdRel: 0.7,
+      fmLevel: 0.3, fmRatio: 3, fmIndex: 0.2, fmEnvAmt: 1, fmFine: 5, fmPan: 0.4, fmAtk: 0.001, fmDec: 0.4, fmSus: 0, fmRel: 0.4,
+      frameHz: 60, r1Op: 0, r1Step: 32, r1Div: 1, r1Pitch: 10,
+      echoFrames: 24, echoFb: 6, echoMix: 0.22, echoPing: 1,
+      rvMix: 0.4, rvSize: 0.8, rvDecay: 3, rvTone: 0.6, volume: 0.9,
+    },
+  },
+  {
+    name: 'Pizz Array', tag: 'pluck',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Duty: 2, p1Level: 0.3, p1Fine: -8, p1Pan: -0.6, p1Atk: 0.002, p1Dec: 0.22, p1Sus: 0, p1Rel: 0.25,
+      p2Duty: 1, p2Level: 0.3, p2Fine: 8, p2Pan: 0.6, p2Atk: 0.002, p2Dec: 0.22, p2Sus: 0, p2Rel: 0.25,
+      wvLevel: 0.4, wvAtk: 0.002, wvDec: 0.3, wvSus: 0, wvRel: 0.3, ...tab('wv', STRING32),
+      fMode: 1, cutoff: 2200, res: 0.1,
+      echoFrames: 12, echoFb: 5, echoMix: 0.2, echoPing: 1,
+      rvMix: 0.45, rvSize: 0.85, rvDecay: 2.8, rvTone: 0.55, volume: 1,
+    },
+  },
+  {
+    name: 'Supersquare Pluck', tag: 'pluck',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Duty: 4, p1Width: 0.5, p1Level: 0.28, p1Fine: -14, p1Pan: -0.8, p1Atk: 0.001, p1Dec: 0.5, p1Sus: 0, p1Rel: 0.4,
+      p2Duty: 4, p2Width: 0.5, p2Level: 0.28, p2Fine: 14, p2Pan: 0.8, p2Atk: 0.001, p2Dec: 0.5, p2Sus: 0, p2Rel: 0.4,
+      wvLevel: 0.35, wvFine: 5, wvAtk: 0.001, wvDec: 0.5, wvSus: 0, wvRel: 0.4, ...tab('wv', SAW32),
+      pdLevel: 0.35, pdShape: 0, pdAmt: 0.7, pdEnvAmt: 1, pdOct: -1, pdAtk: 0.001, pdDec: 0.4, pdSus: 0, pdRel: 0.35,
+      fMode: 1, cutoff: 4500, res: 0.15,
+      echoFrames: 18, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.4, rvSize: 0.85, rvDecay: 3, rvTone: 0.6, volume: 0.81,
+    },
+  },
+  // --------------------------------------------------------------------- leads
+  {
+    name: 'Laser Violin', tag: 'lead',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5, glide: 0.4,
+      p1Duty: 4, p1Width: 0.4, p1Level: 0.3, p1Fine: -6, p1Pan: -0.4, p1Atk: 0.08, p1Sus: 0.9, p1Rel: 0.4,
+      wvLevel: 0.65, wvFine: 6, wvPan: 0.3, wvAtk: 0.06, wvSus: 0.9, wvRel: 0.4, ...tab('wv', STRING32),
+      frameHz: 60, r1Op: 0, r1Step: 30, r1Div: 1, r1Pitch: 18, r2Op: 0, r2Step: 6, r2Div: 1, r2Duty: 0.25,
+      fMode: 1, cutoff: 4200, res: 0.15,
+      echoFrames: 18, echoFb: 7, echoMix: 0.28, echoPing: 1,
+      rvMix: 0.4, rvSize: 0.85, rvDecay: 3, rvTone: 0.6, volume: 0.52,
+    },
+  },
+  {
+    name: 'Vector Saw', tag: 'lead',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.4, glide: 0.3,
+      p1Duty: 4, p1Width: 0.5, p1Level: 0.28, p1Fine: -10, p1Pan: -0.6, p1Sus: 0.9, p1Rel: 0.3,
+      p2Duty: 4, p2Width: 0.5, p2Level: 0.28, p2Fine: 10, p2Pan: 0.6, p2Sus: 0.9, p2Rel: 0.3,
+      pdLevel: 0.6, pdShape: 0, pdAmt: 0.9, pdEnvAmt: 0.2, pdSus: 0.9, pdRel: 0.3,
+      frameHz: 60, r1Op: 0, r1Step: 34, r1Div: 1, r1Pitch: 14,
+      fMode: 1, cutoff: 5000, res: 0.2,
+      echoFrames: 18, echoFb: 7, echoMix: 0.28, echoPing: 1,
+      rvMix: 0.3, rvSize: 0.75, rvDecay: 2.5, volume: 0.47,
+    },
+  },
+  {
+    name: 'Glass Flute', tag: 'lead',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5, glide: 0.25,
+      p1Level: 0,
+      wvLevel: 0.7, wvAtk: 0.06, wvSus: 0.9, wvRel: 0.35, ...tab('wv', WARM32),
+      fmLevel: 0.2, fmOct: 1, fmRatio: 1, fmIndex: 0.1, fmEnvAmt: 0.3, fmAtk: 0.08, fmSus: 0.8, fmRel: 0.35, fmPan: 0.3,
+      nzLevel: 0.05, nzOct: 4, nzMode: 1, nzAtk: 0.05, nzDec: 0.3, nzSus: 0.4, nzRel: 0.3,
+      frameHz: 60, r1Op: 0, r1Step: 28, r1Div: 1, r1Pitch: 12,
+      fMode: 1, cutoff: 3800, res: 0.1,
+      echoFrames: 24, echoFb: 6, echoMix: 0.22, echoPing: 1,
+      rvMix: 0.45, rvSize: 0.9, rvDecay: 3.5, rvTone: 0.6, volume: 0.51,
+    },
+  },
+  {
+    name: 'Resonant Laser', tag: 'lead',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5, glide: 0.2,
+      p1Level: 0,
+      pdLevel: 0.7, pdShape: 4, pdAmt: 0.7, pdEnvAmt: 0.6, pdAtk: 0.003, pdDec: 0.6, pdSus: 0.6, pdRel: 0.3,
+      fmLevel: 0.35, fmRatio: 2, fmIndex: 0.3, fmFb: 0.3, fmEnvAmt: 0.5, fmFine: 6, fmPan: 0.4, fmAtk: 0.003, fmSus: 0.8, fmRel: 0.3,
+      frameHz: 60, r1Op: 0, r1Step: 32, r1Div: 1, r1Pitch: 14,
+      echoFrames: 18, echoFb: 7, echoMix: 0.28, echoPing: 1,
+      rvMix: 0.3, rvSize: 0.75, rvDecay: 2.5, rvTone: 0.65, volume: 0.65,
+    },
+  },
+  {
+    name: 'Portamento Square', tag: 'lead',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.4, glide: 0.8,
+      p1Duty: 2, p1Level: 0.45, p1Fine: -5, p1Pan: -0.3, p1Sus: 0.9, p1Rel: 0.3,
+      p2Duty: 1, p2Level: 0.3, p2Oct: -1, p2Fine: 5, p2Pan: 0.3, p2Sus: 0.9, p2Rel: 0.3,
+      wvLevel: 0.4, wvOct: -1, wvSus: 1, wvRel: 0.3, ...tab('wv', SINE32),
+      frameHz: 60, r1Op: 0, r1Step: 26, r1Div: 1, r1Pitch: 12,
+      fMode: 1, cutoff: 3500, res: 0.15,
+      echoFrames: 18, echoFb: 7, echoMix: 0.28, echoPing: 1,
+      rvMix: 0.3, rvSize: 0.8, rvDecay: 2.5, volume: 0.5,
+    },
+  },
+  {
+    name: 'Choir Lead', tag: 'lead',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.4, glide: 0.3,
+      p1Level: 0,
+      wvLevel: 0.7, wvAtk: 0.05, wvSus: 0.9, wvRel: 0.4, ...tab('wv', VOX32),
+      fmLevel: 0.3, fmRatio: 2, fmIndex: 0.15, fmFb: 0.2, fmEnvAmt: 0.3, fmFine: 7, fmPan: 0.4, fmAtk: 0.08, fmSus: 0.8, fmRel: 0.4,
+      pdLevel: 0.25, pdShape: 3, pdAmt: 0.3, pdEnvAmt: 0.3, pdFine: -7, pdPan: -0.4, pdAtk: 0.08, pdSus: 0.8, pdRel: 0.4,
+      frameHz: 60, r1Op: 0, r1Step: 30, r1Div: 1, r1Pitch: 14,
+      fMode: 1, cutoff: 4000, res: 0.2,
+      echoFrames: 24, echoFb: 7, echoMix: 0.28, echoPing: 1,
+      rvMix: 0.45, rvSize: 0.9, rvDecay: 4, rvTone: 0.6, volume: 0.44,
+    },
+  },
+  // ---------------------------------------------------------------------- bass
+  {
+    name: 'Velvet Sub', tag: 'bass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Duty: 1, p1Level: 0.3, p1Oct: -1, p1Fine: -4, p1Pan: -0.2, p1Atk: 0.002, p1Dec: 0.3, p1Sus: 0.3, p1Rel: 0.1,
+      p2Duty: 1, p2Level: 0.3, p2Oct: -1, p2Fine: 4, p2Pan: 0.2, p2Atk: 0.002, p2Dec: 0.3, p2Sus: 0.3, p2Rel: 0.1,
+      wvLevel: 0.9, wvOct: -2, wvAtk: 0.002, wvSus: 1, wvRel: 0.12, ...tab('wv', SINE32),
+      fMode: 1, cutoff: 900, res: 0.2,
+      rvMix: 0.05, rvDecay: 0.8, volume: 0.52,
+    },
+  },
+  {
+    name: 'PD Growl', tag: 'bass',
+    values: {
+      // a resonant phase-distortion saw that the frame clock chews on the beat
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Level: 0,
+      pdLevel: 0.7, pdShape: 4, pdAmt: 0.6, pdEnvAmt: 0.6, pdOct: -1, pdAtk: 0.002, pdDec: 0.3, pdSus: 0.8, pdRel: 0.12,
+      wvLevel: 0.7, wvOct: -2, wvAtk: 0.002, wvSus: 1, wvRel: 0.12, ...tab('wv', SINE32),
+      frameHz: 120, frameSync: 1, tempo: 140, r1Op: 0, r1Step: 32, r1Div: 1, r1Cut: 0.5,
+      fMode: 1, cutoff: 900, res: 0.45,
+      rvMix: 0.06, rvDecay: 0.8, volume: 0.56,
+    },
+  },
+  {
+    name: 'Pluck Bass Array', tag: 'bass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.7,
+      p1Duty: 2, p1Level: 0.35, p1Oct: -1, p1Fine: -7, p1Pan: -0.3, p1Atk: 0.001, p1Dec: 0.3, p1Sus: 0.2, p1Rel: 0.1,
+      p2Duty: 2, p2Level: 0.35, p2Oct: -1, p2Fine: 7, p2Pan: 0.3, p2Atk: 0.001, p2Dec: 0.3, p2Sus: 0.2, p2Rel: 0.1,
+      pdLevel: 0.45, pdShape: 0, pdAmt: 0.4, pdEnvAmt: 1, pdOct: -1, pdAtk: 0.001, pdDec: 0.2, pdSus: 0, pdRel: 0.1,
+      wvLevel: 0.6, wvOct: -2, wvAtk: 0.001, wvSus: 1, wvRel: 0.1, ...tab('wv', SINE32),
+      fMode: 1, cutoff: 1500, res: 0.25,
+      echoFrames: 12, echoFb: 3, echoMix: 0.12, echoPing: 1,
+      rvMix: 0.06, rvDecay: 0.8, volume: 0.64,
+    },
+  },
+  {
+    name: 'Octave Runner', tag: 'bass',
+    values: {
+      // hold one note: the pitch table bounces it note / octave on the sixteenths
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Duty: 4, p1Width: 0.4, p1Level: 0.32, p1Oct: -1, p1Fine: -6, p1Pan: -0.3, p1Env: 2, p1Rel: 0.08, p1PTab: 1,
+      p2Duty: 4, p2Width: 0.6, p2Level: 0.32, p2Oct: -1, p2Fine: 6, p2Pan: 0.3, p2Env: 2, p2Rel: 0.08, p2PTab: 1,
+      wvLevel: 0.7, wvOct: -2, wvSus: 1, wvRel: 0.08, ...tab('wv', SINE32),
+      ...tab('tvB', [15, 12, 9, 7, 15, 12, 9, 7, 15, 12, 9, 7, 15, 12, 9, 7]), tvBLoop: 0,
+      ...tab('tp', [0, 0, 0, 0, 12, 12, 12, 12, 0, 0, 0, 0, 12, 12, 12, 12]), tpLoop: 0,
+      frameHz: 120, frameSync: 1, tempo: 124, tabDiv: 3,
+      fMode: 1, cutoff: 1400, res: 0.3,
+      echoFrames: 18, echoFb: 4, echoMix: 0.12, echoPing: 1,
+      rvMix: 0.06, rvDecay: 0.8, volume: 0.53,
+    },
+  },
+  {
+    name: 'FM Rubber', tag: 'bass',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.7,
+      p1Level: 0,
+      fmLevel: 0.75, fmOct: -1, fmRatio: 1, fmIndex: 0.6, fmFb: 0.15, fmEnvAmt: 0.9, fmAtk: 0.001, fmDec: 0.2, fmSus: 0.3, fmRel: 0.1,
+      wvLevel: 0.6, wvOct: -2, wvAtk: 0.001, wvSus: 1, wvRel: 0.1, ...tab('wv', HOLLOW32),
+      fMode: 1, cutoff: 1800, res: 0.25,
+      rvMix: 0.05, rvDecay: 0.6, volume: 0.61,
+    },
+  },
+  // ---------------------------------------------------------------------- arps
+  {
+    name: 'Glass Cascade', tag: 'arp',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Level: 0,
+      fmLevel: 0.6, fmRatio: 3, fmIndex: 0.35, fmEnvAmt: 1, fmPan: -0.3, fmAtk: 0.001, fmDec: 0.35, fmSus: 0, fmRel: 0.4,
+      wvLevel: 0.4, wvOct: 1, wvFine: 5, wvPan: 0.35, wvAtk: 0.001, wvDec: 0.5, wvSus: 0, wvRel: 0.5, ...tab('wv', BELL32),
+      frameHz: 120, frameSync: 1, tempo: 112, arpMode: 2, arpDiv: 3, arpOct: 3, arpGate: 0.6,
+      echoFrames: 18, echoFb: 8, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.5, rvSize: 1, rvDecay: 5, rvTone: 0.8, volume: 0.62,
+    },
+  },
+  {
+    name: 'Starlight Arp', tag: 'arp',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Level: 0,
+      pdLevel: 0.55, pdShape: 3, pdAmt: 0.4, pdEnvAmt: 1, pdPan: -0.35, pdAtk: 0.001, pdDec: 0.4, pdSus: 0, pdRel: 0.45,
+      fmLevel: 0.4, fmRatio: 2, fmIndex: 0.25, fmEnvAmt: 1, fmOct: 1, fmFine: 6, fmPan: 0.4, fmAtk: 0.001, fmDec: 0.5, fmSus: 0, fmRel: 0.5,
+      wvLevel: 0.35, wvOct: -1, wvAtk: 0.001, wvDec: 0.6, wvSus: 0.1, wvRel: 0.5, ...tab('wv', WARM32),
+      frameHz: 120, frameSync: 1, tempo: 116, arpMode: 3, arpDiv: 6, arpOct: 2, arpGate: 0.7,
+      echoFrames: 18, echoFb: 8, echoMix: 0.32, echoPing: 1,
+      rvMix: 0.5, rvSize: 1, rvDecay: 5, rvTone: 0.7, volume: 0.51,
+    },
+  },
+  {
+    name: 'Triplet Prism', tag: 'arp',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Duty: 4, p1Width: 0.3, p1Level: 0.25, p1Fine: -7, p1Pan: -0.6, p1Atk: 0.001, p1Dec: 0.3, p1Sus: 0, p1Rel: 0.3,
+      p2Duty: 4, p2Width: 0.7, p2Level: 0.25, p2Fine: 7, p2Pan: 0.6, p2Atk: 0.001, p2Dec: 0.3, p2Sus: 0, p2Rel: 0.3,
+      fmLevel: 0.4, fmRatio: 4, fmIndex: 0.2, fmEnvAmt: 1, fmAtk: 0.001, fmDec: 0.3, fmSus: 0, fmRel: 0.3,
+      frameHz: 120, frameSync: 1, tempo: 100, arpMode: 1, arpDiv: 4, arpOct: 3, arpGate: 0.6,
+      fMode: 1, cutoff: 4000, res: 0.15,
+      echoFrames: 16, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.45, rvSize: 0.9, rvDecay: 4, rvTone: 0.7, volume: 0.84,
+    },
+  },
+  {
+    name: 'Random Rain', tag: 'arp',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Level: 0,
+      wvLevel: 0.5, wvAtk: 0.001, wvDec: 0.5, wvSus: 0, wvRel: 0.6, ...tab('wv', SINE32),
+      pdLevel: 0.4, pdShape: 5, pdAmt: 0.35, pdEnvAmt: 1, pdOct: 1, pdFine: 6, pdPan: 0.4, pdAtk: 0.001, pdDec: 0.3, pdSus: 0, pdRel: 0.4,
+      frameHz: 120, frameSync: 1, tempo: 96, arpMode: 4, arpDiv: 6, arpOct: 2, arpGate: 0.5,
+      lkJitter: 0.1,
+      echoFrames: 24, echoFb: 8, echoMix: 0.32, echoPing: 1,
+      rvMix: 0.55, rvSize: 1, rvDecay: 6, rvTone: 0.65, volume: 0.71,
+    },
+  },
+  {
+    name: 'Played Pulse', tag: 'arp',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Duty: 1, p1Level: 0.3, p1Fine: -8, p1Pan: -0.6, p1Atk: 0.002, p1Dec: 0.5, p1Sus: 0.3, p1Rel: 0.4,
+      p2Duty: 1, p2Level: 0.3, p2Fine: 8, p2Pan: 0.6, p2Atk: 0.002, p2Dec: 0.5, p2Sus: 0.3, p2Rel: 0.4,
+      wvLevel: 0.45, wvOct: -1, wvAtk: 0.002, wvDec: 0.6, wvSus: 0.3, wvRel: 0.4, ...tab('wv', HOLLOW32),
+      frameHz: 120, frameSync: 1, tempo: 108, arpMode: 5, arpDiv: 12, arpOct: 1, arpGate: 0.8,
+      r2Op: 0, r2Step: 4, r2Div: 1, r2Duty: 0.3,
+      fMode: 1, cutoff: 2800, res: 0.2,
+      echoFrames: 18, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.45, rvSize: 0.9, rvDecay: 4, volume: 0.77,
+    },
+  },
+  {
+    name: 'Chord Shimmer', tag: 'arp',
+    values: {
+      // one key plays a major-seventh arpeggio on the sixteenths: the chord arp, frame-synced
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Level: 0,
+      fmLevel: 0.5, fmRatio: 2, fmIndex: 0.2, fmEnvAmt: 0.6, fmPan: -0.35, fmAtk: 0.002, fmDec: 0.8, fmSus: 0.4, fmRel: 1,
+      wvLevel: 0.45, wvFine: 5, wvPan: 0.35, wvAtk: 0.002, wvDec: 0.8, wvSus: 0.4, wvRel: 1, ...tab('wv', WARM32),
+      pdLevel: 0.25, pdShape: 3, pdAmt: 0.3, pdEnvAmt: 0.5, pdOct: 1, pdAtk: 0.002, pdDec: 0.5, pdSus: 0.2, pdRel: 0.8,
+      chord: 6, chordSpeed: 6, chordDir: 2, chordOct: 1,
+      frameHz: 120, frameSync: 1, tempo: 112,
+      echoFrames: 18, echoFb: 8, echoMix: 0.32, echoPing: 1,
+      rvMix: 0.55, rvSize: 1, rvDecay: 6, rvTone: 0.7, volume: 0.54,
+    },
+  },
+  // ----------------------------------------------------------------- sequences
+  {
+    name: 'Table Melody', tag: 'seq',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Level: 0,
+      wvLevel: 0.6, wvEnv: 2, wvRel: 0.3, wvPTab: 1, ...tab('wv', WARM32),
+      fmLevel: 0.4, fmRatio: 2, fmIndex: 0.2, fmEnvAmt: 0, fmEnv: 2, fmFine: 6, fmPan: 0.4, fmRel: 0.3, fmPTab: 1,
+      pdLevel: 0.3, pdShape: 3, pdAmt: 0.3, pdEnvAmt: 0, pdEnv: 2, pdFine: -6, pdPan: -0.4, pdRel: 0.3, pdPTab: 1,
+      ...tab('tvB', [15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7]), tvBLoop: 0,
+      ...tab('tp', [0, 0, 7, 7, 3, 3, 10, 10, 12, 12, 10, 10, 7, 7, 3, 3]), tpLoop: 0,
+      frameHz: 120, frameSync: 1, tempo: 112, tabDiv: 3,
+      echoFrames: 18, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.5, rvSize: 1, rvDecay: 5, rvTone: 0.65, volume: 0.45,
+    },
+  },
+  {
+    name: 'Berlin Table', tag: 'seq',
+    values: {
+      // the sequence from the pitch table, register 1 sweeping the filter slowly over it
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Duty: 4, p1Width: 0.45, p1Level: 0.3, p1Fine: -7, p1Pan: -0.5, p1Env: 2, p1Rel: 0.1, p1PTab: 1,
+      p2Duty: 4, p2Width: 0.55, p2Level: 0.3, p2Fine: 7, p2Pan: 0.5, p2Env: 2, p2Rel: 0.1, p2PTab: 1,
+      wvLevel: 0.5, wvOct: -1, wvEnv: 2, wvRel: 0.1, wvPTab: 1, ...tab('wv', SOFTSAW32),
+      ...tab('tvB', [15, 6, 13, 5, 15, 6, 13, 5, 15, 6, 13, 5, 15, 6, 14, 8]), tvBLoop: 0,
+      ...tab('tp', [0, 0, 12, 12, 0, 0, 7, 7, 0, 0, 12, 12, 3, 3, 5, 5]), tpLoop: 0,
+      frameHz: 120, frameSync: 1, tempo: 120, tabDiv: 3,
+      r1Op: 0, r1Step: 2, r1Div: 4, r1Cut: 0.55,
+      fMode: 1, cutoff: 1400, res: 0.45,
+      echoFrames: 18, echoFb: 8, echoMix: 0.32, echoPing: 1,
+      rvMix: 0.3, rvSize: 0.8, rvDecay: 3, volume: 0.51,
+    },
+  },
+  {
+    name: 'Gate Choir', tag: 'seq',
+    values: {
+      // a choir pad chopped into a rhythm by volume table B on the sixteenths
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.4,
+      p1Duty: 1, p1Level: 0.25, p1Fine: -9, p1Pan: -0.7, p1Env: 2, p1Rel: 0.06,
+      p2Duty: 1, p2Level: 0.25, p2Fine: 9, p2Pan: 0.7, p2Env: 2, p2Rel: 0.06,
+      wvLevel: 0.55, wvEnv: 2, wvRel: 0.06, ...tab('wv', CHOIR32),
+      fmLevel: 0.2, fmOct: -1, fmRatio: 1, fmIndex: 0.1, fmEnvAmt: 0, fmEnv: 2, fmRel: 0.06,
+      ...tab('tvB', [15, 15, 0, 15, 0, 15, 15, 0, 15, 0, 15, 15, 0, 15, 0, 9]), tvBLoop: 0,
+      frameHz: 120, frameSync: 1, tempo: 128, tabDiv: 6,
+      r1Op: 0, r1Step: 3, r1Div: 2, r1Cut: 0.35,
+      fMode: 1, cutoff: 3000, res: 0.2,
+      echoFrames: 18, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.45, rvSize: 0.9, rvDecay: 4, rvTone: 0.6, volume: 0.5,
+    },
+  },
+  {
+    name: 'Euclid Glass', tag: 'seq',
+    values: {
+      // five bell strikes spread over sixteen steps, each on a different note
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Level: 0,
+      fmLevel: 0.6, fmRatio: 3.5, fmIndex: 0.3, fmEnvAmt: 0, fmEnv: 2, fmPan: -0.3, fmRel: 0.6, fmPTab: 1,
+      wvLevel: 0.45, wvOct: 1, wvFine: 5, wvPan: 0.35, wvEnv: 2, wvRel: 0.6, wvPTab: 1, ...tab('wv', BELL32),
+      ...tab('tvB', [15, 6, 2, 15, 6, 2, 15, 6, 2, 0, 15, 6, 2, 15, 6, 2]), tvBLoop: 0,
+      ...tab('tp', [0, 0, 0, 7, 7, 7, 3, 3, 3, 3, 10, 10, 10, 5, 5, 5]), tpLoop: 0,
+      frameHz: 120, frameSync: 1, tempo: 108, tabDiv: 6,
+      echoFrames: 18, echoFb: 8, echoMix: 0.35, echoPing: 1,
+      rvMix: 0.55, rvSize: 1, rvDecay: 6, rvTone: 0.8, volume: 0.42,
+    },
+  },
+  {
+    name: 'Rule 90 Garden', tag: 'seq',
+    values: {
+      // the automaton picks the interval of every note the arp plays
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Level: 0,
+      fmLevel: 0.55, fmRatio: 2, fmIndex: 0.3, fmEnvAmt: 1, fmPan: -0.3, fmAtk: 0.001, fmDec: 0.5, fmSus: 0, fmRel: 0.6,
+      wvLevel: 0.4, wvFine: 5, wvPan: 0.35, wvAtk: 0.001, wvDec: 0.7, wvSus: 0, wvRel: 0.6, ...tab('wv', WARM32),
+      frameHz: 120, frameSync: 1, tempo: 104, arpMode: 5, arpDiv: 12, arpOct: 1, arpGate: 0.6,
+      caRule: 90, caDiv: 12, caPitch: 12,
+      echoFrames: 18, echoFb: 8, echoMix: 0.35, echoPing: 1,
+      rvMix: 0.55, rvSize: 1, rvDecay: 5.5, rvTone: 0.7, volume: 0.81,
+    },
+  },
+  {
+    name: 'Phaser Sequence', tag: 'seq',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Duty: 4, p1Width: 0.5, p1Level: 0.35, p1Fine: -6, p1Pan: -0.5, p1Env: 2, p1Rel: 0.08, p1PTab: 1,
+      p2Duty: 4, p2Width: 0.5, p2Level: 0.35, p2Fine: 6, p2Pan: 0.5, p2Env: 2, p2Rel: 0.08, p2PTab: 1,
+      wvLevel: 0.4, wvOct: -1, wvEnv: 2, wvRel: 0.08, wvPTab: 1, ...tab('wv', HOLLOW32),
+      ...tab('tvB', [15, 8, 15, 8, 15, 8, 15, 8, 15, 8, 15, 8, 15, 8, 15, 8]), tvBLoop: 0,
+      ...tab('tp', [0, 0, 0, 0, 7, 7, 5, 5, 0, 0, 3, 3, 5, 5, 7, 7]), tpLoop: 0,
+      frameHz: 120, frameSync: 1, tempo: 118, tabDiv: 3,
+      r1Op: 2, r1Step: 0b00011111, r1Div: 2, r1Duty: 0.45,
+      fMode: 1, cutoff: 3200, res: 0.2,
+      echoFrames: 18, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.4, rvSize: 0.85, rvDecay: 3.5, volume: 0.51,
+    },
+  },
+  {
+    name: 'XOR Bell Sequence', tag: 'seq',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Duty: 2, p1Level: 0.4, p1Env: 2, p1Rel: 0.15, p1PTab: 1, p1Pan: -0.3,
+      p2Duty: 2, p2Level: 0.4, p2Xor: 1, p2Semi: 7, p2Fine: 4, p2Env: 2, p2Rel: 0.15, p2PTab: 1, p2Pan: 0.3,
+      wvLevel: 0.3, wvOct: -1, wvEnv: 2, wvRel: 0.15, wvPTab: 1, ...tab('wv', SINE32),
+      ...tab('tvB', [15, 9, 5, 2, 15, 9, 5, 2, 15, 9, 5, 2, 15, 9, 15, 9]), tvBLoop: 0,
+      ...tab('tp', [0, 0, 0, 0, 5, 5, 5, 5, 3, 3, 3, 3, 10, 10, 7, 7]), tpLoop: 0,
+      frameHz: 120, frameSync: 1, tempo: 110, tabDiv: 3,
+      fMode: 1, cutoff: 4500, res: 0.15,
+      echoFrames: 18, echoFb: 8, echoMix: 0.35, echoPing: 1,
+      rvMix: 0.5, rvSize: 1, rvDecay: 5, rvTone: 0.75, volume: 0.46,
+    },
+  },
+  {
+    name: 'Acid Table', tag: 'seq',
+    values: {
+      // one chip voice, a resonant filter and a pitch-table line: hold a note
+      mode: 0, clock: 7, precision: 1,
+      p1Duty: 4, p1Width: 0.5, p1Level: 0.75, p1Oct: -1, p1Env: 2, p1Rel: 0.06, p1PTab: 1,
+      ...tab('tvB', [15, 9, 12, 8, 15, 9, 10, 7, 15, 9, 13, 8, 15, 12, 9, 7]), tvBLoop: 0,
+      ...tab('tp', [0, 0, 12, 0, 0, 0, 3, 0, 0, 10, 0, 12, 0, 7, 5, 0]), tpLoop: 0,
+      frameHz: 120, frameSync: 1, tempo: 126, tabDiv: 6,
+      r1Op: 0, r1Step: 3, r1Div: 3, r1Cut: 0.5,
+      fMode: 1, cutoff: 900, res: 0.8,
+      echoFrames: 18, echoFb: 6, echoMix: 0.25, echoPing: 1,
+      rvMix: 0.12, rvDecay: 1, volume: 0.62,
+    },
+  },
+  // ------------------------------------------------------------ drums & perc
+  {
+    name: 'Deep Kick', tag: 'drum',
+    values: {
+      // a sine two octaves down, its pitch table falling an octave in a few milliseconds
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Duty: 0, p1Level: 0.2, p1Atk: 0.001, p1Dec: 0.015, p1Sus: 0, p1Rel: 0.01,
+      wvLevel: 1, wvOct: -2, wvAtk: 0.001, wvDec: 0.4, wvSus: 0, wvRel: 0.2, wvPTab: 1, ...tab('wv', SINE32),
+      ...tab('tp', [12, 9, 6, 4, 3, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]), tpLoop: 16,
+      frameHz: 240, tabDiv: 1,
+      rvMix: 0.04, rvDecay: 0.5, volume: 0.91,
+    },
+  },
+  {
+    name: 'Punch Kick', tag: 'drum',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Level: 0,
+      pdLevel: 0.6, pdShape: 4, pdAmt: 0.5, pdEnvAmt: 1, pdOct: -2, pdAtk: 0.001, pdDec: 0.08, pdSus: 0, pdRel: 0.05, pdPTab: 1,
+      wvLevel: 0.9, wvOct: -2, wvAtk: 0.001, wvDec: 0.3, wvSus: 0, wvRel: 0.15, wvPTab: 1, ...tab('wv', SINE32),
+      ...tab('tp', [12, 8, 5, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), tpLoop: 16,
+      frameHz: 240, tabDiv: 1,
+      lkSpeaker: 0.2, rvMix: 0.04, rvDecay: 0.5, volume: 1,
+    },
+  },
+  {
+    name: 'Snare Body', tag: 'drum',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Level: 0,
+      nzLevel: 0.85, nzOct: 3, nzMode: 1, nzEnv: 1, nzRel: 0.05,
+      ...tab('tvA', [15, 13, 11, 9, 8, 6, 5, 4, 3, 2, 2, 1, 1, 0, 0, 0]),
+      wvLevel: 0.6, wvAtk: 0.001, wvDec: 0.09, wvSus: 0, wvRel: 0.05, wvPTab: 1, ...tab('wv', SINE32),
+      ...tab('tp', [7, 4, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), tpLoop: 16,
+      frameHz: 120, tabDiv: 1,
+      rvMix: 0.25, rvSize: 0.5, rvDecay: 1.2, rvGate: 0.35, rvTone: 0.8, volume: 0.88,
+    },
+  },
+  {
+    name: 'Clap Static', tag: 'drum',
+    values: {
+      // the volume table flutters for the first few steps: several hands, then the room
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Level: 0,
+      nzLevel: 0.95, nzOct: 3, nzMode: 1, nzEnv: 1, nzRel: 0.05,
+      ...tab('tvA', [15, 3, 14, 2, 13, 11, 9, 8, 6, 5, 4, 3, 2, 1, 1, 0]),
+      frameHz: 200, tabDiv: 1,
+      fMode: 3, cutoff: 700, res: 0.15,
+      rvMix: 0.3, rvSize: 0.5, rvDecay: 1.2, rvGate: 0.3, rvTone: 0.7, volume: 0.88,
+    },
+  },
+  {
+    name: 'Closed Hat', tag: 'drum',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Level: 0,
+      nzLevel: 1, nzOct: 4, nzMode: 1, nzEnv: 1, nzRel: 0.02,
+      ...tab('tvA', [15, 8, 4, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+      frameHz: 240, tabDiv: 1,
+      fMode: 3, cutoff: 6000, res: 0.15,
+      rvMix: 0.06, rvDecay: 0.6, volume: 0.88,
+    },
+  },
+  {
+    name: 'Open Hat', tag: 'drum',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Level: 0,
+      nzLevel: 1, nzOct: 4, nzMode: 1, nzEnv: 1, nzRel: 0.08,
+      ...tab('tvA', [15, 14, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 2, 1, 0]),
+      frameHz: 60, tabDiv: 1,
+      fMode: 3, cutoff: 5500, res: 0.15,
+      rvMix: 0.08, rvDecay: 0.8, volume: 0.75,
+    },
+  },
+  {
+    name: 'Metal Ride', tag: 'drum',
+    values: {
+      // the short LFSR mode is metallic and pitched; two pulses xor-ed add the bell
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Duty: 2, p1Level: 0.25, p1Oct: 2, p1Atk: 0.001, p1Dec: 0.8, p1Sus: 0, p1Rel: 0.6,
+      p2Duty: 2, p2Level: 0.25, p2Oct: 2, p2Xor: 1, p2Semi: 6, p2Fine: 30, p2Atk: 0.001, p2Dec: 0.8, p2Sus: 0, p2Rel: 0.6,
+      nzLevel: 0.6, nzOct: 4, nzMode: 0, nzAtk: 0.001, nzDec: 1, nzSus: 0, nzRel: 0.8,
+      fMode: 3, cutoff: 3500, res: 0.1,
+      rvMix: 0.15, rvDecay: 1.4, rvTone: 0.8, volume: 1,
+    },
+  },
+  {
+    name: 'Chip Cowbell', tag: 'drum',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Duty: 2, p1Level: 0.5, p1Oct: 1, p1Atk: 0.001, p1Dec: 0.3, p1Sus: 0, p1Rel: 0.2,
+      p2Duty: 2, p2Level: 0.5, p2Oct: 1, p2Semi: 7, p2Fine: -20, p2Atk: 0.001, p2Dec: 0.3, p2Sus: 0, p2Rel: 0.2,
+      fMode: 2, cutoff: 1100, res: 0.45,
+      rvMix: 0.1, rvDecay: 0.8, volume: 0.88,
+    },
+  },
+  {
+    name: 'Tom Cascade', tag: 'drum',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Level: 0,
+      wvLevel: 0.95, wvOct: -1, wvAtk: 0.001, wvDec: 0.45, wvSus: 0, wvRel: 0.3, wvPTab: 1, ...tab('wv', SINE32),
+      nzLevel: 0.15, nzOct: 2, nzMode: 1, nzAtk: 0.001, nzDec: 0.04, nzSus: 0, nzRel: 0.03,
+      ...tab('tp', [7, 6, 5, 4, 3, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0]), tpLoop: 16,
+      frameHz: 120, tabDiv: 1,
+      rvMix: 0.25, rvSize: 0.6, rvDecay: 1.5, volume: 0.94,
+    },
+  },
+  {
+    name: 'House Machine', tag: 'drum',
+    values: {
+      // hold one low note: table B kicks on the quarters, table A puts a hat on the off-beats
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.4,
+      p1Level: 0,
+      wvLevel: 1, wvOct: -2, wvEnv: 2, wvRel: 0.05, wvPTab: 1, ...tab('wv', SINE32),
+      nzLevel: 0.55, nzOct: 4, nzMode: 0, nzEnv: 1, nzRel: 0.03,
+      ...tab('tvB', [15, 9, 4, 1, 0, 0, 0, 0, 15, 9, 4, 1, 0, 0, 0, 0]), tvBLoop: 0,
+      ...tab('tvA', [0, 0, 0, 0, 13, 6, 2, 0, 0, 0, 0, 0, 13, 6, 2, 0]), tvALoop: 0,
+      ...tab('tp', [7, 2, 0, 0, 0, 0, 0, 0, 7, 2, 0, 0, 0, 0, 0, 0]), tpLoop: 0,
+      frameHz: 120, frameSync: 1, tempo: 122, tabDiv: 3,
+      fMode: 1, cutoff: 9000, res: 0.1,
+      rvMix: 0.1, rvDecay: 0.8, rvGate: 0.3, volume: 0.53,
+    },
+  },
+  {
+    name: 'Glitch Perc', tag: 'drum',
+    values: {
+      // the random arp plays a pitched LFSR click; register 1 throws its pitch about
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.6,
+      p1Level: 0,
+      nzLevel: 0.9, nzOct: 2, nzMode: 0, nzAtk: 0.001, nzDec: 0.07, nzSus: 0, nzRel: 0.05,
+      pdLevel: 0.4, pdShape: 4, pdAmt: 0.8, pdEnvAmt: 1, pdAtk: 0.001, pdDec: 0.05, pdSus: 0, pdRel: 0.04,
+      frameHz: 120, frameSync: 1, tempo: 112, arpMode: 4, arpDiv: 6, arpOct: 2, arpGate: 0.3,
+      r1Op: 4, r1Step: 77, r1Div: 6, r1Pitch: 1200,
+      echoFrames: 9, echoFb: 6, echoMix: 0.25, echoPing: 1,
+      rvMix: 0.15, rvDecay: 0.8, rvGate: 0.2, volume: 1,
+    },
+  },
+  // ------------------------------------------------------------------------ fx
+  {
+    name: 'Riser Array', tag: 'fx',
+    values: {
+      // hold it: the pitch table climbs a step every two-thirds of a second, register 1 opens the filter
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.3,
+      p1Duty: 4, p1Width: 0.5, p1Level: 0.25, p1Fine: -15, p1Pan: -0.8, p1Atk: 4, p1Sus: 1, p1Rel: 2, p1PTab: 1,
+      p2Duty: 4, p2Width: 0.5, p2Level: 0.25, p2Fine: 15, p2Pan: 0.8, p2Atk: 4, p2Sus: 1, p2Rel: 2, p2PTab: 1,
+      nzLevel: 0.35, nzOct: 3, nzMode: 1, nzAtk: 6, nzSus: 1, nzRel: 2,
+      ...tab('tp', [-12, -10, -9, -7, -5, -4, -2, 0, 2, 3, 5, 7, 8, 10, 12, 12]), tpLoop: 16,
+      frameHz: 12, tabDiv: 8, r1Op: 1, r1Step: 1, r1Div: 1, r1Cut: 0.8,
+      fMode: 1, cutoff: 900, res: 0.35,
+      echoFrames: 6, echoFb: 9, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.6, rvSize: 1, rvDecay: 8, rvTone: 0.6, volume: 0.57,
+    },
+  },
+  {
+    name: 'Falling Satellite', tag: 'fx',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.3,
+      p1Level: 0,
+      fmLevel: 0.6, fmRatio: 1.41, fmIndex: 0.4, fmFb: 0.2, fmEnvAmt: 0.4, fmAtk: 0.01, fmDec: 6, fmSus: 0.2, fmRel: 3, fmPTab: 1,
+      wvLevel: 0.4, wvFine: 10, wvPan: 0.4, wvAtk: 0.01, wvSus: 1, wvRel: 3, wvPTab: 1, ...tab('wv', BELL32),
+      ...tab('tp', [12, 11, 9, 8, 6, 5, 3, 2, 0, -2, -3, -5, -7, -9, -11, -12]), tpLoop: 16,
+      frameHz: 16, tabDiv: 4,
+      lkDrift: 0.6, lkJitter: 0.2,
+      echoFrames: 12, echoFb: 9, echoMix: 0.35, echoPing: 1,
+      rvMix: 0.6, rvSize: 1, rvDecay: 9, rvTone: 0.6, volume: 0.43,
+    },
+  },
+  {
+    name: 'Laser Zap', tag: 'fx',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Duty: 0, p1Level: 0.6, p1Oct: 1, p1Atk: 0.001, p1Dec: 0.3, p1Sus: 0, p1Rel: 0.1, p1PTab: 1,
+      p2Duty: 1, p2Level: 0.4, p2Oct: 1, p2Fine: 20, p2Pan: 0.5, p2Atk: 0.001, p2Dec: 0.3, p2Sus: 0, p2Rel: 0.1, p2PTab: 1,
+      ...tab('tp', [12, 9, 6, 3, 0, -3, -6, -9, -12, -12, -12, -12, -12, -12, -12, -12]), tpLoop: 16,
+      frameHz: 240, tabDiv: 1,
+      echoFrames: 6, echoFb: 8, echoMix: 0.35, echoPing: 1,
+      rvMix: 0.2, rvDecay: 1.2, volume: 0.81,
+    },
+  },
+  {
+    name: 'Sonar Ping', tag: 'fx',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.5,
+      p1Level: 0,
+      wvLevel: 0.8, wvOct: 1, wvAtk: 0.001, wvDec: 0.6, wvSus: 0, wvRel: 0.5, ...tab('wv', SINE32),
+      fmLevel: 0.2, fmOct: 1, fmRatio: 2.5, fmIndex: 0.1, fmEnvAmt: 1, fmAtk: 0.001, fmDec: 0.3, fmSus: 0, fmRel: 0.3,
+      echoFrames: 32, echoFb: 11, echoMix: 0.45, echoPing: 1,
+      rvMix: 0.55, rvSize: 1, rvDecay: 8, rvTone: 0.55, volume: 0.61,
+    },
+  },
+  {
+    name: 'Modem Dream', tag: 'fx',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.3,
+      p1Level: 0,
+      fmLevel: 0.55, fmRatio: 5.5, fmIndex: 0.35, fmFb: 0.2, fmEnvAmt: 0, fmAtk: 0.5, fmSus: 1, fmRel: 3,
+      wvLevel: 0.4, wvOct: -1, wvAtk: 1, wvSus: 1, wvRel: 3, ...tab('wv', WARM32),
+      frameHz: 20, r1Op: 4, r1Step: 113, r1Div: 2, r1Pitch: 700, r2Op: 0, r2Step: 3, r2Div: 1, r2Cut: 0.3,
+      fMode: 1, cutoff: 2500, res: 0.3,
+      lkCodec: 0.5, lkKbps: 24, lkJitter: 0.25,
+      echoFrames: 20, echoFb: 9, echoMix: 0.35, echoPing: 1,
+      rvMix: 0.65, rvSize: 1, rvDecay: 9, rvTone: 0.45, volume: 0.37,
+    },
+  },
+  {
+    name: 'Power Down', tag: 'fx',
+    values: {
+      // the machine dies: pitch sinks an octave, the clock drifts, packets go missing
+      mode: 1, cycle: 0, clock: 5, precision: 1, vel: 0.3,
+      p1Duty: 2, p1Level: 0.35, p1Atk: 0.01, p1Sus: 1, p1Rel: 1, p1PTab: 1, p1Pan: -0.4,
+      wvLevel: 0.5, wvFine: 8, wvPan: 0.4, wvAtk: 0.01, wvSus: 1, wvRel: 1, wvPTab: 1, ...tab('wv', HOLLOW32),
+      ...tab('tp', [0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -10, -11, -11, -12, -12]), tpLoop: 16,
+      frameHz: 20, tabDiv: 2,
+      lkDrift: 1, lkLoss: 0.3, lkFrame: 12, lkConceal: 2,
+      rvMix: 0.45, rvSize: 0.9, rvDecay: 5, rvTone: 0.4, volume: 0.45,
+    },
+  },
+  // ---------------------------------------------------------------- textures
+  {
+    name: 'Data Rain', tag: 'weird',
+    values: {
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.4,
+      p1Level: 0,
+      fmLevel: 0.4, fmRatio: 4, fmIndex: 0.3, fmEnvAmt: 1, fmOct: 1, fmAtk: 0.001, fmDec: 0.3, fmSus: 0, fmRel: 0.4,
+      pdLevel: 0.3, pdShape: 3, pdAmt: 0.4, pdEnvAmt: 1, pdOct: 2, pdPan: 0.5, pdAtk: 0.001, pdDec: 0.2, pdSus: 0, pdRel: 0.3,
+      frameHz: 120, frameSync: 1, tempo: 100, arpMode: 4, arpDiv: 3, arpOct: 3, arpGate: 0.4,
+      lkJitter: 0.15,
+      echoFrames: 24, echoFb: 9, echoMix: 0.4, echoPing: 1,
+      rvMix: 0.65, rvSize: 1, rvDecay: 8, rvTone: 0.7, volume: 0.56,
+    },
+  },
+  {
+    name: 'Swarm Array', tag: 'weird',
+    values: {
+      // five channels detuned apart and an LFSR on the pitch at 120 Hz: a shimmering swarm
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.3,
+      p1Duty: 4, p1Width: 0.4, p1Level: 0.22, p1Fine: -18, p1Pan: -0.9, p1Atk: 1.5, p1Sus: 1, p1Rel: 3,
+      p2Duty: 4, p2Width: 0.6, p2Level: 0.22, p2Fine: 18, p2Pan: 0.9, p2Atk: 1.5, p2Sus: 1, p2Rel: 3,
+      wvLevel: 0.4, wvFine: -6, wvAtk: 1.5, wvSus: 1, wvRel: 3, ...tab('wv', STRING32),
+      pdLevel: 0.25, pdShape: 0, pdAmt: 0.6, pdEnvAmt: 0, pdFine: 9, pdPan: 0.4, pdAtk: 2, pdSus: 1, pdRel: 3,
+      fmLevel: 0.2, fmOct: 1, fmFine: -9, fmRatio: 1, fmIndex: 0.15, fmEnvAmt: 0, fmPan: -0.4, fmAtk: 2, fmSus: 1, fmRel: 3,
+      frameHz: 120, r1Op: 4, r1Step: 91, r1Div: 1, r1Pitch: 14, r2Op: 0, r2Step: 2, r2Div: 1, r2Cut: 0.25,
+      fMode: 1, cutoff: 3500, res: 0.2,
+      echoFrames: 24, echoFb: 7, echoMix: 0.2, echoPing: 1,
+      rvMix: 0.55, rvSize: 1, rvDecay: 6, rvTone: 0.55, volume: 0.5,
+    },
+  },
+  {
+    name: 'Frozen Signal', tag: 'weird',
+    values: {
+      // play a short chord: the plate at ten seconds and a full-feedback echo hold it
+      mode: 1, cycle: 0, clock: 7, precision: 1, vel: 0.4,
+      p1Level: 0,
+      fmLevel: 0.5, fmRatio: 2, fmIndex: 0.15, fmEnvAmt: 0.5, fmPan: -0.4, fmAtk: 0.01, fmDec: 3, fmSus: 0.3, fmRel: 10,
+      wvLevel: 0.5, wvFine: 6, wvPan: 0.4, wvAtk: 0.01, wvDec: 3, wvSus: 0.3, wvRel: 10, ...tab('wv', BELL32),
+      lkCodec: 0.25, lkKbps: 64,
+      echoFrames: 32, echoFb: 12, echoMix: 0.35, echoPing: 1,
+      rvMix: 0.7, rvSize: 1, rvDecay: 10, rvTone: 0.6, volume: 0.46,
     },
   },
   {

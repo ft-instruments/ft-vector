@@ -340,8 +340,8 @@ window.addEventListener('keydown', (e) => {
 // Categories, in the order they should appear in the browser. "user" is the
 // sounds saved in this browser.
 const CATEGORY_NAMES: Record<string, string> = {
-  user: 'yours', chip: 'chip', arp: 'arps', tracker: 'tracker leads', bass: 'bass', drum: 'drums', pad: 'pads', glass: 'glass',
-  link: 'the link', seq: 'sequences', weird: 'weird', init: 'init',
+  user: 'yours', chip: 'chip', pad: 'pads', glass: 'glass & bells', pluck: 'plucks', lead: 'leads', tracker: 'tracker leads',
+  bass: 'bass', arp: 'arps', seq: 'sequences', drum: 'drums & perc', link: 'the link', fx: 'fx', weird: 'weird', init: 'init',
 };
 const CATEGORY_ORDER = Object.keys(CATEGORY_NAMES);
 const catRank = (tag: string) => { const i = CATEGORY_ORDER.indexOf(tag); return i < 0 ? CATEGORY_ORDER.length : i; };
@@ -462,7 +462,9 @@ function buildBrowser(): void {
   for (const p of browseOrder) counts.set(p.tag, (counts.get(p.tag) ?? 0) + 1);
   if (!userPresets.length) {
     // keep a place for them, so saving has somewhere to land
-    const h = document.createElement('div'); h.className = 'cat'; h.dataset.tag = 'user'; h.textContent = CATEGORY_NAMES.user;
+    const h = document.createElement('div'); h.className = 'cat'; h.dataset.tag = 'user';
+    h.innerHTML = '<span class="nm"></span>';
+    h.querySelector('.nm')!.textContent = CATEGORY_NAMES.user;
     const empty = document.createElement('div'); empty.className = 'empty';
     empty.textContent = 'nothing saved yet — shape a sound, then “save current” (⌘S)';
     listEl.append(h, empty); heads.set('user', h);
@@ -486,11 +488,13 @@ function buildBrowser(): void {
       lastTag = p.tag;
       const h = document.createElement('div');
       h.className = 'cat'; h.dataset.tag = p.tag;
-      h.textContent = CATEGORY_NAMES[p.tag] ?? p.tag;
+      h.innerHTML = '<span class="nm"></span><span class="count"></span>';
+      h.querySelector('.nm')!.textContent = CATEGORY_NAMES[p.tag] ?? p.tag;
+      h.querySelector('.count')!.textContent = String(counts.get(p.tag) ?? 0);
       listEl.append(h); heads.set(p.tag, h);
     }
     const card = document.createElement('button');
-    card.type = 'button'; card.className = 'card'; card.dataset.tag = p.tag;
+    card.type = 'button'; card.className = 'card'; card.dataset.tag = p.tag; card.title = p.name;
     card.dataset.search = `${p.name} ${CATEGORY_NAMES[p.tag] ?? p.tag}`.toLowerCase();
     card.innerHTML = `<span class="nm"></span><span class="tg"></span>`;
     card.querySelector<HTMLElement>('.nm')!.textContent = p.name;

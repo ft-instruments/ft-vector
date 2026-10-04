@@ -127,22 +127,25 @@ Chrome, starts the worklet, plays a chord and checks the output level.
 
 ## Presets
 
-84, grouped in a searchable browser (click the preset name or press `` ` ``, `Esc` closes); `< >` step through them in browser order, **mutate** nudges.
+150, grouped in a searchable browser (click the preset name or press `` ` ``, `Esc` closes); `< >` step through them in browser order, **mutate** nudges.
 
 | category | presets |
 |---|---|
 | chip | Thomas (major chord arp at 60 Hz, tri bass, LFSR hat, stepped vibrato, frame echo) · Chord Stab · Slide Bass (stepped glide, xor fifth) · Ring Lead · Metal Hat · Square Bass · Duty Phaser · Tracker Lead (pitch table) · Game Boy · Mega Lead · Octave Bass · Pixel Pluck · Boss Fight · Bubble · Laser · Arcade Orchestra |
-| arps | Crystal Run · Stairway · Cascade Bells · Neon Stepper · Rain Arp · Broken Arp · Choir Arp (note arp + chord arp) · Prism Arp |
+| arps | Crystal Run · Stairway · Cascade Bells · Neon Stepper · Rain Arp · Broken Arp · Choir Arp (note arp + chord arp) · Prism Arp · Glass Cascade · Starlight Arp · Triplet Prism · Random Rain · Played Pulse · Chord Shimmer |
 | tracker leads | Tracker Arp (the pitch table plays the chord) · Round Lead · Warm Square · Tracker Bell · Sweep Lead · Minor Third Lead · Octave Bounce · Hyper Saw · Vox Lead |
-| bass | Sub Reactor · Reese Circuit · FM Punch Bass |
-| drums | Kick 8-bit · Snare Noise · Glitch Kit · Tom Divider — pitch tables and LFSR, the way chips did drums |
-| pads | Sleeper Pad · Neon Choir · Hologram · Cold Storage · Server Room · Nebula Stack · Aurora Grid · Glass Cathedral |
-| glass | Terminal Bell · Neon Rain · DX Keys · Glass Marimba · Tubular · CZ Brass · Ice Piano · Crystal EP · Vapor Keys · Mallet Garden · Neon Brass |
+| bass | Sub Reactor · Reese Circuit · FM Punch Bass · Velvet Sub · PD Growl · Pluck Bass Array · Octave Runner · FM Rubber |
+| drums & perc | Kick 8-bit · Snare Noise · Glitch Kit · Tom Divider · Deep Kick · Punch Kick · Snare Body · Clap Static · Closed Hat · Open Hat · Metal Ride · Chip Cowbell · Tom Cascade · House Machine · Glitch Perc — pitch tables, volume tables and the LFSR, the way chips did drums |
+| pads | Sleeper Pad · Neon Choir · Hologram · Cold Storage · Server Room · Nebula Stack · Aurora Grid · Glass Cathedral · Silk Nebula · Choir of Machines · Warm Signal · Glacial FM · String Machine · Dawn Array · Vapor Halo · Deep Field |
+| glass & bells | Terminal Bell · Neon Rain · DX Keys · Glass Marimba · Tubular · CZ Brass · Ice Piano · Crystal EP · Vapor Keys · Mallet Garden · Neon Brass · Glass Rhodes · Celesta Array · Crystal Harp · Bell Garden · Velvet EP · Music Box Grid · Tine Kalimba |
 | the link | Corrupted Choir · Data Storm · Underwater · Dropout · Stutter Choir · Dial-up · Static Field · Ghost Signal · Lo-Fi Memory |
-| weird | Bitwise · Modem Choir · Time Slip · Fractal · Whale · Clockwork · Neural Drone · Orbital Drone |
-| sequences | Rule 110 · Rule 30 Bass · Trance Gate · XOR Sequence · Automaton Bells · Data Runner · Stardust (maj7 chord arp) |
+| weird | Bitwise · Modem Choir · Time Slip · Fractal · Whale · Clockwork · Neural Drone · Orbital Drone · Data Rain · Swarm Array · Frozen Signal |
+| sequences | Rule 110 · Rule 30 Bass · Trance Gate · XOR Sequence · Automaton Bells · Data Runner · Stardust (maj7 chord arp) · Table Melody · Berlin Table · Gate Choir · Euclid Glass · Rule 90 Garden · Phaser Sequence · XOR Bell Sequence · Acid Table |
+| plucks | Neon Pluck · Glass Pluck · Harp Stack · Data Koto · Pizz Array · Supersquare Pluck |
+| leads | Laser Violin · Vector Saw · Glass Flute · Resonant Laser · Portamento Square · Choir Lead |
+| fx | Riser Array · Falling Satellite · Laser Zap · Sonar Ping · Modem Dream · Power Down |
 
-The 17 newest (the bass row, and the last one or few of the others) are
+In the first bank, the 17 newest (the first three bass, and the last one or few of the others) are
 stacks: three or four channels layered in
 modern mode, detuned and spread across the stereo field, with **precision**
 at 1 so the detune beats instead of landing on the same divider step (the
@@ -150,6 +153,18 @@ divider's resolution is about 7 cents around A4, which swallows small
 detunes), slow register motion on pitch and duty, a ping-pong frame echo and
 a large plate. Three new drawn waves go with them: a soft saw, a hollow
 (odd-harmonic) square and a vowel-ish body.
+
+The second bank (66, after Stardust in `params.ts`, so the host's program
+numbers for the first 84 are unchanged) is built the same way, with four
+more drawn waves (a brighter saw, a sparse bell, a darker choir vowel and a
+warm near-sine), and adds plucks, leads and fx. Its sequences use the tables
+as a step sequencer: frame sync on and 3 frames per step make each table
+step a thirty-second, the pitch table holds each note for two steps and
+volume table B accents the first of each pair; the tables restart with every
+note, so a held chord plays the pattern from the key press. **House Machine**
+plays a kick and an off-beat hat from one held low note. The new presets were
+level-matched by measurement: tonal ones sit within about 2 dB of the first
+bank's median loudness, drums a little below.
 
 ## UI
 
@@ -196,7 +211,7 @@ README for the list).
   `Engine.h`). Buffers the TS keeps in `Float32Array`s are `float`,
   everything else is `double`, and `Math.round` is JS's (halves towards +∞),
   so the two engines agree: `node scripts/null-test.ts` renders every preset
-  with both and subtracts — all 84 are bit-identical. The codec keeps its
+  with both and subtracts — all 150 are bit-identical. The codec keeps its
   naive MDCT for that reason (an FFT would round differently); in C++ it is
   cheap anyway. Nothing allocates on the audio thread. About twice as fast
   as V8 (`out/vector-render bench`: 5 % of a core for eight voices of
