@@ -23,6 +23,37 @@ vertically, `Shift` for fine, double-click to reset. Draw in the grids
 (right button clears). **mutate** nudges the patch; **dump** puts the patch
 JSON on the clipboard (paste it into `PRESETS` in `params.ts` to keep it).
 
+## Download
+
+Builds of the VST3, the AU (macOS only) and the standalone app for macOS,
+Windows and Linux are attached to each
+[release](https://github.com/filipefthomaz-gd/ft-vector/releases).
+
+| | Standalone | VST3 | AU |
+|---|---|---|---|
+| macOS (Apple silicon + Intel) | yes | yes | yes |
+| Windows | yes | yes | no |
+| Linux | yes | yes | no |
+
+Unzip and copy the plugin to your plugin folder (macOS
+`~/Library/Audio/Plug-Ins/{VST3,Components}`, Windows
+`C:\Program Files\Common Files\VST3`, Linux `~/.vst3`). The builds are not
+signed or notarized: on macOS right-click the app and choose Open the first
+time (or run `xattr -dr com.apple.quarantine` on the files); on Windows
+SmartScreen asks once. The Windows editor needs the WebView2 runtime
+(included in Windows 11); on Linux it needs WebKitGTK.
+
+## Privacy
+
+VECTOR makes no network connections: no telemetry, no update check, no
+analytics, no accounts. The fonts are bundled ([`src/fonts/`](src/fonts/)),
+the plugin serves its UI from memory (`PluginEditor.cpp`, a JUCE resource
+provider), and JUCE is built without its networking code
+(`JUCE_USE_CURL=0`). Your saved presets are plain files on your disk. To
+check it yourself, search the source for `fetch(`, `XMLHttpRequest`,
+`WebSocket` and `http` (the only hits are the SVG namespace string), or watch
+the app with Little Snitch or `nettop`.
+
 ## Signal path
 
 ```
@@ -248,3 +279,12 @@ for eight voices of the heaviest preset with the codec on, at 48 kHz in V8.
 - The link runs at the host rate; a real transmission would be resampled to the codec's rate first.
 - Tables share one position per voice (both volume tables step together).
 - Presets can be copied as JSON but not saved in the browser yet.
+
+## License
+
+VECTOR is free software under the [GNU AGPL v3](LICENSE). The plugin is built
+on [JUCE](https://juce.com), which is itself AGPLv3 (or commercial), so the
+whole thing is distributed under the AGPL (the bundled fonts keep their own
+[SIL OFL](src/fonts/); see [THIRD-PARTY.md](THIRD-PARTY.md)): you can use it for anything,
+including music you sell, and change it and share it, as long as a modified
+version you distribute comes with its source under the same license.
