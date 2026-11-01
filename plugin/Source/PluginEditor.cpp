@@ -7,15 +7,26 @@ namespace {
 
 const char* mimeFor(const juce::String& file) {
   const auto ext = file.fromLastOccurrenceOf(".", false, false).toLowerCase();
-  if (ext == "html") return "text/html";
-  if (ext == "js") return "text/javascript";
-  if (ext == "css") return "text/css";
+  if (ext == "html") return "text/html; charset=utf-8";
+  if (ext == "js") return "text/javascript; charset=utf-8";
+  if (ext == "css") return "text/css; charset=utf-8";
   if (ext == "svg") return "image/svg+xml";
   if (ext == "png") return "image/png";
-  if (ext == "json") return "application/json";
+  if (ext == "json") return "application/json; charset=utf-8";
   if (ext == "woff2") return "font/woff2";
   if (ext == "woff") return "font/woff";
   return "application/octet-stream";
+}
+
+// Linux: the WebView renders on the GPU (patch-juce.cmake), but on NVIDIA
+// WebKit cannot share GPU buffers with the window (GBM fails) and shows
+// nothing; handing frames over in shared memory works everywhere. Set before
+// the WebView's helper process starts, which inherits it. A value the user
+// set is kept.
+void webkitEnv() {
+ #if JUCE_LINUX
+  setenv("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1", 0);
+ #endif
 }
 
 juce::var valuesObject(const std::array<float, NUM_PARAMS>& v) {
@@ -28,7 +39,7 @@ juce::var valuesObject(const std::array<float, NUM_PARAMS>& v) {
 
 VectorEditor::VectorEditor(VectorProcessor& p)
   : AudioProcessorEditor(p), proc(p),
-    web(juce::WebBrowserComponent::Options {}
+    web((webkitEnv(), juce::WebBrowserComponent::Options {})
           .withBackend(juce::WebBrowserComponent::Options::Backend::webview2)
           .withNativeIntegrationEnabled()
           .withKeepPageLoadedWhenBrowserIsHidden()

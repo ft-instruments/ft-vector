@@ -7,6 +7,26 @@
    This file is structure and light only. Each instrument's style.css sets
    the skin: the tokens below, its fonts, its accents and its background. */
 
+/* The fonts ship with the app (src/fonts, SIL Open Font License): the UI never
+   fetches anything from the network. Latin subsets. */
+@font-face { font-family: "Orbitron"; font-weight: 400 900; font-display: swap;
+  src: url("./fonts/orbitron-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "Chakra Petch"; font-weight: 500; font-display: swap;
+  src: url("./fonts/chakra-petch-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Chakra Petch"; font-weight: 600; font-display: swap;
+  src: url("./fonts/chakra-petch-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Chakra Petch"; font-weight: 700; font-display: swap;
+  src: url("./fonts/chakra-petch-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Geist"; font-weight: 100 900; font-display: swap;
+  src: url("./fonts/geist-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "Geist Mono"; font-weight: 100 900; font-display: swap;
+  src: url("./fonts/geist-mono-latin-wght-normal.woff2") format("woff2"); }
+/* Arrows and key symbols (→ ← ↑ ⌘ ▪ …) that the Latin fonts above do not
+   cover; without it Linux WebKit shows tofu. Subset of Noto Sans Symbols and
+   Noto Sans Symbols 2 (SIL OFL). */
+@font-face { font-family: "FT Symbols"; font-weight: 400; font-display: swap;
+  src: url("./fonts/ft-symbols.woff2") format("woff2"); }
+
 :root {
   --bg: #05090a;
   --ink: #e6f4ee;                 /* text */
@@ -18,9 +38,9 @@
   --glass-b: rgba(6, 10, 11, 0.78);
   --well: rgba(0, 0, 0, 0.42);
   --accent: #78ffc8;
-  --display: "Tektur", "Rajdhani", system-ui, sans-serif;
-  --ui: "Geist", "Inter", system-ui, sans-serif;
-  --mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  --display: "Tektur", "Rajdhani", "FT Symbols", system-ui, sans-serif;
+  --ui: "Geist", "Inter", "FT Symbols", system-ui, sans-serif;
+  --mono: "Geist Mono", "JetBrains Mono", "FT Symbols", ui-monospace, monospace;
   --cut: 14px;                    /* the chamfer */
   --blur: 14px;
 }

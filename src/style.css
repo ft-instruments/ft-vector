@@ -21,8 +21,8 @@
   --glass-a: rgba(14, 18, 42, 0.64);
   --glass-b: rgba(4, 6, 16, 0.82);
   --well: rgba(1, 2, 10, 0.62);
-  --display: "Chakra Petch", "Orbitron", system-ui, sans-serif;
-  --logo: "Orbitron", "Chakra Petch", system-ui, sans-serif;
+  --display: "Chakra Petch", "Orbitron", "FT Symbols", system-ui, sans-serif;
+  --logo: "Orbitron", "Chakra Petch", "FT Symbols", system-ui, sans-serif;
   --cut: 16px;
 }
 

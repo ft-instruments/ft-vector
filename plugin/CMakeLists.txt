@@ -19,9 +19,14 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "")
 include(FetchContent)
 FetchContent_Declare(JUCE
   GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-  GIT_TAG 8.0.9
-  GIT_SHALLOW TRUE)
+  GIT_TAG 8.0.15
+  GIT_SHALLOW TRUE
+  # let the Linux WebView use the GPU (see patch-juce.cmake)
+  PATCH_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/patch-juce.cmake)
 FetchContent_MakeAvailable(JUCE)
+
+# Copy the built plugins into the user's plugin folders (off in CI).
+option(VECTOR_INSTALL "Install the plugins after building" ON)
 
 set(VECTOR_FORMATS VST3 Standalone)
 if(APPLE)
@@ -44,7 +49,8 @@ juce_add_plugin(Vector
   NEEDS_WEB_BROWSER TRUE
   VST3_CATEGORIES Instrument Synth
   AU_MAIN_TYPE kAudioUnitType_MusicDevice
-  COPY_PLUGIN_AFTER_BUILD TRUE)
+  NEEDS_WEBVIEW2 TRUE
+  COPY_PLUGIN_AFTER_BUILD ${VECTOR_INSTALL})
 
 target_sources(Vector PRIVATE
   Source/PluginProcessor.cpp
@@ -54,6 +60,7 @@ target_include_directories(Vector PRIVATE Source)
 
 target_compile_definitions(Vector PUBLIC
   JUCE_WEB_BROWSER=1
+  JUCE_USE_WIN_WEBVIEW2_WITH_STATIC_LINKING=1
   JUCE_USE_CURL=0
   JUCE_VST3_CAN_REPLACE_VST2=0)
 
