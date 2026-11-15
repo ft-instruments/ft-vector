@@ -11,6 +11,8 @@ type Draw = (g: Pen, v: ParamValues) => void;
 
 /** A canvas drawing helper with the module's accent and a glow. */
 class Pen {
+  /** the caption (drawn by Viz in a band under the graph, never over it) */
+  cap = '';
   constructor(public ctx: CanvasRenderingContext2D, public w: number, public h: number, public rgb: string) {}
   c(a: number): string { return `rgba(${this.rgb}, ${a})`; }
 
@@ -70,9 +72,11 @@ class Pen {
     ctx.shadowBlur = 0;
   }
 
-  text(s: string, x: number, y: number, align: CanvasTextAlign = 'left', a = 0.55): void {
+  /** The usual call (top right, y = 13) sets the caption; anything else is drawn where it is asked for, as a message inside the graph. */
+  text(s: string, x: number, y: number, align: CanvasTextAlign = 'left', a = 0.78): void {
+    if (y === 13) { this.cap = s; return; }
     const { ctx } = this;
-    ctx.font = '500 9px "Geist Mono", "FT Symbols", ui-monospace, monospace';
+    ctx.font = '500 10.5px "Geist Mono", "FT Symbols", ui-monospace, monospace';
     ctx.textAlign = align; ctx.fillStyle = `rgba(255, 255, 255, ${a})`;
     ctx.fillText(s.toUpperCase(), x, y);
   }
@@ -172,6 +176,31 @@ const phaseDist: Draw = (g, v) => {
   const shape = Math.round(v.pdShape);
   g.wave((ph) => pd(ph, shape, v.pdAmt), 2, 180, g.h / 2 - 10, levelAlpha(v.pdLevel));
   g.text(['saw', 'square', 'pulse', 'dbl sine', 'reso saw', 'reso tri'][shape], g.w - 8, 13, 'right');
+};
+
+/** The unison stack: each voice faint, the sum bold. Detune is exaggerated so the beating shows. */
+const unisonSaw: Draw = (g, v) => {
+  g.grid(4);
+  const nv = Math.max(1, Math.round(v.swVoices)), square = Math.round(v.swShape) === 1;
+  const mid = g.h / 2, amp = g.h / 2 - 10, cycles = 3, steps = 240;
+  const wave = (ph: number) => (square ? (ph < 0.5 ? 1 : -1) : 2 * ph - 1);
+  const alpha = levelAlpha(v.swLevel);
+  const sum = new Float32Array(steps + 1);
+  for (let u = 0; u < nv; u++) {
+    const pos = nv > 1 ? (2 * u) / (nv - 1) - 1 : 0;
+    const ratio = 1 + pos * v.swDetune * 0.0035;
+    const pts: [number, number][] = [];
+    for (let i = 0; i <= steps; i++) {
+      const y = wave((((i / steps) * cycles * ratio) % 1 + 1) % 1);
+      sum[i] += y / nv;
+      pts.push([(i / steps) * g.w, mid - y * amp * 0.9]);
+    }
+    if (nv > 1) g.trace(pts, { fill: false, alpha: alpha * 0.22, width: 1 });
+  }
+  const pts: [number, number][] = [];
+  for (let i = 0; i <= steps; i++) pts.push([(i / steps) * g.w, mid - sum[i] * amp * 0.9]);
+  g.trace(pts, { base: mid, alpha });
+  g.text(`${nv} voice${nv > 1 ? 's' : ''} · ±${Math.round(v.swDetune)} ct · ${square ? 'square' : 'saw'}`, g.w - 8, 13, 'right');
 };
 
 const machine: Draw = (g, v) => {
@@ -280,6 +309,38 @@ const echo: Draw = (g, v) => {
   g.text(`${frames} f · ${Math.round(dt * 1000)} ms`, w - 8, 13, 'right');
 };
 
+/** The three delay taps drifting around the centre delay; the shaded band is the swing. */
+const chorus: Draw = (g, v) => {
+  const { w, h } = g;
+  g.grid(8, 2);
+  const mid = h / 2, swing = (h / 2 - 10) * v.chDepth, a = v.chMix > 0 ? 1 : 0.3;
+  const cycles = Math.max(0.5, Math.min(4, v.chRate * 2));   // two seconds of the LFO
+  for (let k = 0; k < 3; k++) {
+    const pts: [number, number][] = [];
+    for (let i = 0; i <= 160; i++) pts.push([(i / 160) * w, mid + Math.sin(Math.PI * 2 * ((i / 160) * cycles + k / 3)) * swing]);
+    g.trace(pts, { fill: false, alpha: a * (k === 0 ? 1 : 0.45), width: k === 0 ? 2 : 1 });
+  }
+  g.text(`${Math.round(v.chMix * 100)}% · ${v.chRate.toFixed(2)} Hz${v.width !== 1 ? ` · width ${Math.round(v.width * 100)}%` : ''}`, w - 8, 13, 'right');
+};
+
+/** The mix level over time: a duck on every Nth frame, recovering over the release. */
+const pump: Draw = (g, v) => {
+  const { w, h } = g;
+  g.grid(8, 2);
+  if (v.pumpAmt <= 0) { g.text('off', w - 8, 13, 'right'); return; }
+  const hz = v.frameSync >= 0.5 ? (v.tempo / 60) * 24 : v.frameHz;
+  const period = Math.max(1, Math.round(v.pumpDiv)) / hz, span = period * 3.2;
+  const top = 18, bottom = h - 8, pts: [number, number][] = [];
+  for (let i = 0; i <= 240; i++) {
+    const t = (i / 240) * span, ts = t % period;
+    const e = ts < 0.004 ? ts / 0.004 : Math.exp(-3 * (ts - 0.004) / v.pumpRel);
+    const gain = 1 - v.pumpAmt * e;
+    pts.push([(i / 240) * w, bottom - gain * (bottom - top)]);
+  }
+  g.trace(pts, { base: bottom });
+  g.text(`every ${Math.round(v.pumpDiv)} f · ${Math.round(period * 1000)} ms`, w - 8, 13, 'right');
+};
+
 const plate: Draw = (g, v) => {
   const { w, h } = g;
   g.grid(6);
@@ -329,8 +390,8 @@ const link: Draw = (g, v) => {
 };
 
 export const VIZ: Record<string, Draw> = {
-  p1: pulse('p1'), p2: pulse('p2'), wv: wavetable, nz: noise, fm, pd: phaseDist,
-  machine, chord, arp, clock, svf, echo, plate, link,
+  p1: pulse('p1'), p2: pulse('p2'), wv: wavetable, nz: noise, fm, pd: phaseDist, sw: unisonSaw,
+  machine, chord, arp, clock, svf, echo, plate, link, chorus, pump,
 };
 
 /** One module's picture: a canvas that redraws itself from the values. */
@@ -364,6 +425,19 @@ export class Viz {
     this.ctx.clearRect(0, 0, r.width, r.height);
     // the module's accent, resolved: the canvas's CSS colour is var(--accent)
     const rgb = getComputedStyle(this.el).color.match(/\d+(\.\d+)?/g)?.slice(0, 3).join(', ') ?? '25, 230, 255';
-    VIZ[this.kind]?.(new Pen(this.ctx, r.width, r.height, rgb), this.values);
+    // the graph is clipped to its own box and the caption has a band of its own under it
+    const CAP = 18, gh = Math.max(24, r.height - CAP);
+    const ctx = this.ctx;
+    ctx.save(); ctx.beginPath(); ctx.rect(2, 2, r.width - 4, gh - 3); ctx.clip();
+    ctx.translate(0, 5);                                  // and inset a little, so a full-scale curve stays off the border
+    const pen = new Pen(ctx, r.width, gh - 10, rgb);
+    VIZ[this.kind]?.(pen, this.values);
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.09)'; ctx.fillRect(0, gh, r.width, 1);
+    if (pen.cap) {
+      ctx.font = '500 10.5px "Geist Mono", "FT Symbols", ui-monospace, monospace';
+      ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
+      ctx.fillText(pen.cap.toUpperCase(), r.width - 14, gh + 13);
+    }
   }
 }

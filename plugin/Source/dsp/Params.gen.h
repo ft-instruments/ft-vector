@@ -243,6 +243,28 @@ enum : int {
   rvTone,
   rvGate,
   volume,
+  swLevel,
+  swOct,
+  swSemi,
+  swFine,
+  swPan,
+  swEnv,
+  swAtk,
+  swDec,
+  swSus,
+  swRel,
+  swPTab,
+  swShape,
+  swVoices,
+  swDetune,
+  swSpread,
+  chMix,
+  chRate,
+  chDepth,
+  pumpAmt,
+  pumpDiv,
+  pumpRel,
+  width,
   COUNT
 };
 }
@@ -269,6 +291,8 @@ inline constexpr const char* LABELS_arpMode[] = { "off", "up", "down", "up/dn", 
 inline constexpr const char* LABELS_fMode[] = { "off", "lp", "bp", "hp" };
 inline constexpr const char* LABELS_lkConceal[] = { "mute", "repeat", "smear", "continue" };
 inline constexpr const char* LABELS_lkDither[] = { "none", "tpdf", "shaped" };
+inline constexpr const char* LABELS_swEnv[] = { "adsr", "tab A", "tab B" };
+inline constexpr const char* LABELS_swShape[] = { "saw", "square" };
 
 inline constexpr ParamDef PARAMS[NUM_PARAMS] = {
   { "mode", "mode", "chip", 0.0, 1.0, 0.0, Scale::Enum, nullptr, LABELS_mode, 2, -1, -1 },
@@ -499,17 +523,41 @@ inline constexpr ParamDef PARAMS[NUM_PARAMS] = {
   { "rvTone", "tone", "reverb", 0.0, 1.0, 0.7, Scale::Lin, nullptr, nullptr, 0, -1, -1 },
   { "rvGate", "gate", "reverb", 0.0, 1.0, 0.0, Scale::Lin, nullptr, nullptr, 0, -1, -1 },
   { "volume", "volume", "out", 0.0, 1.0, 0.7, Scale::Lin, nullptr, nullptr, 0, -1, -1 },
+  { "swLevel", "level", "sw", 0.0, 1.0, 0.0, Scale::Lin, nullptr, nullptr, 0, -1, -1 },
+  { "swOct", "octave", "sw", -2.0, 2.0, 0.0, Scale::Int, nullptr, nullptr, 0, -1, -1 },
+  { "swSemi", "semi", "sw", -12.0, 12.0, 0.0, Scale::Int, nullptr, nullptr, 0, -1, -1 },
+  { "swFine", "fine", "sw", -50.0, 50.0, 0.0, Scale::Lin, "ct", nullptr, 0, -1, -1 },
+  { "swPan", "pan", "sw", -1.0, 1.0, 0.0, Scale::Lin, nullptr, nullptr, 0, -1, -1 },
+  { "swEnv", "env", "sw", 0.0, 2.0, 0.0, Scale::Enum, nullptr, LABELS_swEnv, 3, -1, -1 },
+  { "swAtk", "attack", "sw", 0.001, 8.0, 0.002, Scale::Log, "s", nullptr, 0, -1, -1 },
+  { "swDec", "decay", "sw", 0.005, 8.0, 0.3, Scale::Log, "s", nullptr, 0, -1, -1 },
+  { "swSus", "sustain", "sw", 0.0, 1.0, 0.7, Scale::Lin, nullptr, nullptr, 0, -1, -1 },
+  { "swRel", "release", "sw", 0.005, 10.0, 0.08, Scale::Log, "s", nullptr, 0, -1, -1 },
+  { "swPTab", "pitch tab", "sw", 0.0, 1.0, 0.0, Scale::Bool, nullptr, nullptr, 0, -1, -1 },
+  { "swShape", "shape", "sw", 0.0, 1.0, 0.0, Scale::Enum, nullptr, LABELS_swShape, 2, -1, -1 },
+  { "swVoices", "voices", "sw", 1.0, 7.0, 5.0, Scale::Int, nullptr, nullptr, 0, -1, -1 },
+  { "swDetune", "detune", "sw", 0.0, 60.0, 18.0, Scale::Lin, "ct", nullptr, 0, -1, -1 },
+  { "swSpread", "spread", "sw", 0.0, 1.0, 0.7, Scale::Lin, nullptr, nullptr, 0, -1, -1 },
+  { "chMix", "mix", "chorus", 0.0, 1.0, 0.0, Scale::Lin, nullptr, nullptr, 0, -1, -1 },
+  { "chRate", "rate", "chorus", 0.05, 4.0, 0.7, Scale::Log, "Hz", nullptr, 0, -1, -1 },
+  { "chDepth", "depth", "chorus", 0.0, 1.0, 0.5, Scale::Lin, nullptr, nullptr, 0, -1, -1 },
+  { "pumpAmt", "depth", "pump", 0.0, 1.0, 0.0, Scale::Lin, nullptr, nullptr, 0, -1, -1 },
+  { "pumpDiv", "every", "pump", 1.0, 48.0, 24.0, Scale::Int, "frames", nullptr, 0, -1, -1 },
+  { "pumpRel", "release", "pump", 0.03, 1.5, 0.3, Scale::Log, "s", nullptr, 0, -1, -1 },
+  { "width", "width", "out", 0.0, 2.0, 1.0, Scale::Lin, nullptr, nullptr, 0, -1, -1 },
 };
 
-/** Per channel (pulse 1, pulse 2, wave, noise, fm, pd), the index of each of its common parameters. */
+/** Per channel (pulse 1, pulse 2, wave, noise, fm, pd, saw), the index of each of its common parameters. */
+constexpr int NUM_CHANNELS = 7;
 struct ChannelIds { int level, oct, semi, fine, pan, env, atk, dec, sus, rel, ptab; };
-inline constexpr ChannelIds CHANNEL_IDS[6] = {
+inline constexpr ChannelIds CHANNEL_IDS[NUM_CHANNELS] = {
   { P::p1Level, P::p1Oct, P::p1Semi, P::p1Fine, P::p1Pan, P::p1Env, P::p1Atk, P::p1Dec, P::p1Sus, P::p1Rel, P::p1PTab },
   { P::p2Level, P::p2Oct, P::p2Semi, P::p2Fine, P::p2Pan, P::p2Env, P::p2Atk, P::p2Dec, P::p2Sus, P::p2Rel, P::p2PTab },
   { P::wvLevel, P::wvOct, P::wvSemi, P::wvFine, P::wvPan, P::wvEnv, P::wvAtk, P::wvDec, P::wvSus, P::wvRel, P::wvPTab },
   { P::nzLevel, P::nzOct, P::nzSemi, P::nzFine, P::nzPan, P::nzEnv, P::nzAtk, P::nzDec, P::nzSus, P::nzRel, P::nzPTab },
   { P::fmLevel, P::fmOct, P::fmSemi, P::fmFine, P::fmPan, P::fmEnv, P::fmAtk, P::fmDec, P::fmSus, P::fmRel, P::fmPTab },
   { P::pdLevel, P::pdOct, P::pdSemi, P::pdFine, P::pdPan, P::pdEnv, P::pdAtk, P::pdDec, P::pdSus, P::pdRel, P::pdPTab },
+  { P::swLevel, P::swOct, P::swSemi, P::swFine, P::swPan, P::swEnv, P::swAtk, P::swDec, P::swSus, P::swRel, P::swPTab },
 };
 
 inline constexpr double CLOCK_HZ[] = { 8000.0, 11025.0, 16000.0, 22050.0, 32000.0, 44100.0, 48000.0, 96000.0 };
@@ -670,8 +718,28 @@ inline constexpr PresetValue PRESET_145[] = { { P::mode, 1.0 }, { P::cycle, 0.0 
 inline constexpr PresetValue PRESET_146[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::clock, 7.0 }, { P::precision, 1.0 }, { P::vel, 0.4 }, { P::p1Level, 0.0 }, { P::fmLevel, 0.4 }, { P::fmRatio, 4.0 }, { P::fmIndex, 0.3 }, { P::fmEnvAmt, 1.0 }, { P::fmOct, 1.0 }, { P::fmAtk, 0.001 }, { P::fmDec, 0.3 }, { P::fmSus, 0.0 }, { P::fmRel, 0.4 }, { P::pdLevel, 0.3 }, { P::pdShape, 3.0 }, { P::pdAmt, 0.4 }, { P::pdEnvAmt, 1.0 }, { P::pdOct, 2.0 }, { P::pdPan, 0.5 }, { P::pdAtk, 0.001 }, { P::pdDec, 0.2 }, { P::pdSus, 0.0 }, { P::pdRel, 0.3 }, { P::frameHz, 120.0 }, { P::frameSync, 1.0 }, { P::tempo, 100.0 }, { P::arpMode, 4.0 }, { P::arpDiv, 3.0 }, { P::arpOct, 3.0 }, { P::arpGate, 0.4 }, { P::lkJitter, 0.15 }, { P::echoFrames, 24.0 }, { P::echoFb, 9.0 }, { P::echoMix, 0.4 }, { P::echoPing, 1.0 }, { P::rvMix, 0.65 }, { P::rvSize, 1.0 }, { P::rvDecay, 8.0 }, { P::rvTone, 0.7 }, { P::volume, 0.56 } };
 inline constexpr PresetValue PRESET_147[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::clock, 7.0 }, { P::precision, 1.0 }, { P::vel, 0.3 }, { P::p1Duty, 4.0 }, { P::p1Width, 0.4 }, { P::p1Level, 0.22 }, { P::p1Fine, -18.0 }, { P::p1Pan, -0.9 }, { P::p1Atk, 1.5 }, { P::p1Sus, 1.0 }, { P::p1Rel, 3.0 }, { P::p2Duty, 4.0 }, { P::p2Width, 0.6 }, { P::p2Level, 0.22 }, { P::p2Fine, 18.0 }, { P::p2Pan, 0.9 }, { P::p2Atk, 1.5 }, { P::p2Sus, 1.0 }, { P::p2Rel, 3.0 }, { P::wvLevel, 0.4 }, { P::wvFine, -6.0 }, { P::wvAtk, 1.5 }, { P::wvSus, 1.0 }, { P::wvRel, 3.0 }, { P::wv0, 8.0 }, { P::wv1, 13.0 }, { P::wv2, 15.0 }, { P::wv3, 13.0 }, { P::wv4, 12.0 }, { P::wv5, 12.0 }, { P::wv6, 12.0 }, { P::wv7, 11.0 }, { P::wv8, 10.0 }, { P::wv9, 10.0 }, { P::wv10, 10.0 }, { P::wv11, 9.0 }, { P::wv12, 9.0 }, { P::wv13, 9.0 }, { P::wv14, 8.0 }, { P::wv15, 8.0 }, { P::wv16, 8.0 }, { P::wv17, 7.0 }, { P::wv18, 7.0 }, { P::wv19, 6.0 }, { P::wv20, 6.0 }, { P::wv21, 6.0 }, { P::wv22, 5.0 }, { P::wv23, 5.0 }, { P::wv24, 5.0 }, { P::wv25, 4.0 }, { P::wv26, 3.0 }, { P::wv27, 3.0 }, { P::wv28, 3.0 }, { P::wv29, 2.0 }, { P::wv30, 0.0 }, { P::wv31, 2.0 }, { P::pdLevel, 0.25 }, { P::pdShape, 0.0 }, { P::pdAmt, 0.6 }, { P::pdEnvAmt, 0.0 }, { P::pdFine, 9.0 }, { P::pdPan, 0.4 }, { P::pdAtk, 2.0 }, { P::pdSus, 1.0 }, { P::pdRel, 3.0 }, { P::fmLevel, 0.2 }, { P::fmOct, 1.0 }, { P::fmFine, -9.0 }, { P::fmRatio, 1.0 }, { P::fmIndex, 0.15 }, { P::fmEnvAmt, 0.0 }, { P::fmPan, -0.4 }, { P::fmAtk, 2.0 }, { P::fmSus, 1.0 }, { P::fmRel, 3.0 }, { P::frameHz, 120.0 }, { P::r1Op, 4.0 }, { P::r1Step, 91.0 }, { P::r1Div, 1.0 }, { P::r1Pitch, 14.0 }, { P::r2Op, 0.0 }, { P::r2Step, 2.0 }, { P::r2Div, 1.0 }, { P::r2Cut, 0.25 }, { P::fMode, 1.0 }, { P::cutoff, 3500.0 }, { P::res, 0.2 }, { P::echoFrames, 24.0 }, { P::echoFb, 7.0 }, { P::echoMix, 0.2 }, { P::echoPing, 1.0 }, { P::rvMix, 0.55 }, { P::rvSize, 1.0 }, { P::rvDecay, 6.0 }, { P::rvTone, 0.55 }, { P::volume, 0.5 } };
 inline constexpr PresetValue PRESET_148[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::clock, 7.0 }, { P::precision, 1.0 }, { P::vel, 0.4 }, { P::p1Level, 0.0 }, { P::fmLevel, 0.5 }, { P::fmRatio, 2.0 }, { P::fmIndex, 0.15 }, { P::fmEnvAmt, 0.5 }, { P::fmPan, -0.4 }, { P::fmAtk, 0.01 }, { P::fmDec, 3.0 }, { P::fmSus, 0.3 }, { P::fmRel, 10.0 }, { P::wvLevel, 0.5 }, { P::wvFine, 6.0 }, { P::wvPan, 0.4 }, { P::wvAtk, 0.01 }, { P::wvDec, 3.0 }, { P::wvSus, 0.3 }, { P::wvRel, 10.0 }, { P::wv0, 8.0 }, { P::wv1, 13.0 }, { P::wv2, 13.0 }, { P::wv3, 11.0 }, { P::wv4, 12.0 }, { P::wv5, 13.0 }, { P::wv6, 13.0 }, { P::wv7, 11.0 }, { P::wv8, 11.0 }, { P::wv9, 10.0 }, { P::wv10, 11.0 }, { P::wv11, 12.0 }, { P::wv12, 15.0 }, { P::wv13, 15.0 }, { P::wv14, 11.0 }, { P::wv15, 7.0 }, { P::wv16, 8.0 }, { P::wv17, 8.0 }, { P::wv18, 4.0 }, { P::wv19, 0.0 }, { P::wv20, 0.0 }, { P::wv21, 3.0 }, { P::wv22, 4.0 }, { P::wv23, 5.0 }, { P::wv24, 4.0 }, { P::wv25, 4.0 }, { P::wv26, 2.0 }, { P::wv27, 2.0 }, { P::wv28, 3.0 }, { P::wv29, 4.0 }, { P::wv30, 2.0 }, { P::wv31, 2.0 }, { P::lkCodec, 0.25 }, { P::lkKbps, 64.0 }, { P::echoFrames, 32.0 }, { P::echoFb, 12.0 }, { P::echoMix, 0.35 }, { P::echoPing, 1.0 }, { P::rvMix, 0.7 }, { P::rvSize, 1.0 }, { P::rvDecay, 10.0 }, { P::rvTone, 0.6 }, { P::volume, 0.46 } };
+inline constexpr PresetValue PRESET_150[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.3 }, { P::p1Level, 0.0 }, { P::swLevel, 0.6 }, { P::swShape, 0.0 }, { P::swVoices, 7.0 }, { P::swDetune, 22.0 }, { P::swSpread, 0.9 }, { P::swAtk, 0.7 }, { P::swDec, 1.0 }, { P::swSus, 0.8 }, { P::swRel, 1.8 }, { P::fMode, 1.0 }, { P::cutoff, 2600.0 }, { P::res, 0.15 }, { P::chMix, 0.4 }, { P::chRate, 0.5 }, { P::chDepth, 0.6 }, { P::width, 1.25 }, { P::echoFrames, 12.0 }, { P::echoFb, 5.0 }, { P::echoMix, 0.2 }, { P::echoPing, 1.0 }, { P::rvMix, 0.4 }, { P::rvSize, 0.9 }, { P::rvDecay, 3.5 }, { P::rvTone, 0.6 }, { P::volume, 0.6 } };
+inline constexpr PresetValue PRESET_151[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.6 }, { P::p1Level, 0.0 }, { P::swLevel, 0.65 }, { P::swShape, 0.0 }, { P::swVoices, 5.0 }, { P::swDetune, 12.0 }, { P::swSpread, 0.6 }, { P::swAtk, 0.004 }, { P::swDec, 0.4 }, { P::swSus, 0.75 }, { P::swRel, 0.35 }, { P::glide, 2.0 }, { P::fMode, 1.0 }, { P::cutoff, 5200.0 }, { P::res, 0.3 }, { P::chMix, 0.25 }, { P::chRate, 0.9 }, { P::chDepth, 0.35 }, { P::echoFrames, 9.0 }, { P::echoFb, 6.0 }, { P::echoMix, 0.28 }, { P::echoPing, 1.0 }, { P::rvMix, 0.22 }, { P::rvSize, 0.7 }, { P::rvDecay, 2.0 }, { P::rvTone, 0.65 }, { P::volume, 0.6 } };
+inline constexpr PresetValue PRESET_152[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.5 }, { P::p1Level, 0.0 }, { P::swLevel, 0.7 }, { P::swShape, 1.0 }, { P::swOct, -1.0 }, { P::swVoices, 3.0 }, { P::swDetune, 8.0 }, { P::swSpread, 0.25 }, { P::swAtk, 0.002 }, { P::swDec, 0.3 }, { P::swSus, 0.55 }, { P::swRel, 0.12 }, { P::fMode, 1.0 }, { P::cutoff, 900.0 }, { P::res, 0.4 }, { P::rvMix, 0.06 }, { P::rvDecay, 1.0 }, { P::volume, 0.6 } };
+inline constexpr PresetValue PRESET_153[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.3 }, { P::frameSync, 1.0 }, { P::tempo, 110.0 }, { P::p1Level, 0.0 }, { P::swLevel, 0.6 }, { P::swShape, 0.0 }, { P::swVoices, 7.0 }, { P::swDetune, 26.0 }, { P::swSpread, 1.0 }, { P::swAtk, 0.3 }, { P::swDec, 1.0 }, { P::swSus, 1.0 }, { P::swRel, 1.0 }, { P::fMode, 1.0 }, { P::cutoff, 3200.0 }, { P::res, 0.2 }, { P::pumpAmt, 0.75 }, { P::pumpDiv, 24.0 }, { P::pumpRel, 0.3 }, { P::chMix, 0.35 }, { P::chRate, 0.4 }, { P::chDepth, 0.6 }, { P::width, 1.3 }, { P::rvMix, 0.35 }, { P::rvSize, 0.85 }, { P::rvDecay, 3.0 }, { P::rvTone, 0.6 }, { P::volume, 0.6 } };
+inline constexpr PresetValue PRESET_154[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.3 }, { P::frameSync, 1.0 }, { P::tempo, 124.0 }, { P::p1Level, 0.0 }, { P::swLevel, 0.6 }, { P::swShape, 1.0 }, { P::swVoices, 5.0 }, { P::swDetune, 14.0 }, { P::swSpread, 0.8 }, { P::swAtk, 0.05 }, { P::swDec, 1.0 }, { P::swSus, 1.0 }, { P::swRel, 0.6 }, { P::fMode, 1.0 }, { P::cutoff, 2200.0 }, { P::res, 0.35 }, { P::pumpAmt, 0.9 }, { P::pumpDiv, 12.0 }, { P::pumpRel, 0.22 }, { P::chMix, 0.25 }, { P::width, 1.2 }, { P::echoFrames, 18.0 }, { P::echoFb, 6.0 }, { P::echoMix, 0.25 }, { P::echoPing, 1.0 }, { P::rvMix, 0.25 }, { P::rvDecay, 2.0 }, { P::volume, 0.6 } };
+inline constexpr PresetValue PRESET_155[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.5 }, { P::frameSync, 1.0 }, { P::tempo, 100.0 }, { P::p1Level, 0.0 }, { P::swLevel, 0.6 }, { P::swShape, 0.0 }, { P::swVoices, 4.0 }, { P::swDetune, 10.0 }, { P::swSpread, 0.7 }, { P::swAtk, 0.002 }, { P::swDec, 0.25 }, { P::swSus, 0.15 }, { P::swRel, 0.25 }, { P::arpMode, 1.0 }, { P::arpDiv, 6.0 }, { P::arpOct, 2.0 }, { P::arpGate, 0.5 }, { P::fMode, 1.0 }, { P::cutoff, 4200.0 }, { P::res, 0.3 }, { P::chMix, 0.3 }, { P::chRate, 0.6 }, { P::chDepth, 0.4 }, { P::width, 1.3 }, { P::echoFrames, 18.0 }, { P::echoFb, 8.0 }, { P::echoMix, 0.38 }, { P::echoPing, 1.0 }, { P::rvMix, 0.3 }, { P::rvSize, 0.8 }, { P::rvDecay, 2.6 }, { P::rvTone, 0.7 }, { P::volume, 0.6 } };
+inline constexpr PresetValue PRESET_156[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.5 }, { P::frameSync, 1.0 }, { P::tempo, 128.0 }, { P::p1Level, 0.0 }, { P::swLevel, 0.7 }, { P::swShape, 0.0 }, { P::swOct, -1.0 }, { P::swVoices, 3.0 }, { P::swDetune, 9.0 }, { P::swSpread, 0.3 }, { P::swAtk, 0.002 }, { P::swDec, 0.2 }, { P::swSus, 0.3 }, { P::swRel, 0.1 }, { P::arpMode, 3.0 }, { P::arpDiv, 3.0 }, { P::arpOct, 2.0 }, { P::arpGate, 0.55 }, { P::fMode, 1.0 }, { P::cutoff, 1500.0 }, { P::res, 0.45 }, { P::pumpAmt, 0.35 }, { P::pumpDiv, 6.0 }, { P::pumpRel, 0.12 }, { P::echoFrames, 9.0 }, { P::echoFb, 5.0 }, { P::echoMix, 0.2 }, { P::rvMix, 0.1 }, { P::volume, 0.6 } };
+inline constexpr PresetValue PRESET_157[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.4 }, { P::p1Level, 0.0 }, { P::swLevel, 0.5 }, { P::swShape, 1.0 }, { P::swVoices, 2.0 }, { P::swDetune, 6.0 }, { P::swSpread, 0.4 }, { P::swAtk, 0.01 }, { P::swDec, 0.7 }, { P::swSus, 0.3 }, { P::swRel, 0.7 }, { P::wvLevel, 0.35 }, { P::wvOct, -1.0 }, { P::wvAtk, 0.02 }, { P::wvDec, 0.6 }, { P::wvSus, 0.5 }, { P::wvRel, 0.6 }, { P::fMode, 1.0 }, { P::cutoff, 2200.0 }, { P::res, 0.1 }, { P::chMix, 0.2 }, { P::chRate, 0.35 }, { P::chDepth, 0.4 }, { P::echoFrames, 12.0 }, { P::echoFb, 6.0 }, { P::echoMix, 0.25 }, { P::echoPing, 1.0 }, { P::rvMix, 0.45 }, { P::rvSize, 0.9 }, { P::rvDecay, 3.2 }, { P::rvTone, 0.55 }, { P::volume, 0.6 } };
+inline constexpr PresetValue PRESET_158[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.5 }, { P::p1Level, 0.0 }, { P::fmLevel, 0.5 }, { P::fmRatio, 3.5 }, { P::fmIndex, 0.25 }, { P::fmEnvAmt, 0.8 }, { P::fmAtk, 0.002 }, { P::fmDec, 1.2 }, { P::fmSus, 0.0 }, { P::fmRel, 1.5 }, { P::swLevel, 0.15 }, { P::swOct, 1.0 }, { P::swVoices, 3.0 }, { P::swDetune, 14.0 }, { P::swSpread, 1.0 }, { P::swAtk, 0.005 }, { P::swDec, 0.8 }, { P::swSus, 0.0 }, { P::swRel, 1.5 }, { P::chMix, 0.35 }, { P::chRate, 0.5 }, { P::chDepth, 0.5 }, { P::width, 1.4 }, { P::echoFrames, 12.0 }, { P::echoFb, 8.0 }, { P::echoMix, 0.3 }, { P::echoPing, 1.0 }, { P::rvMix, 0.5 }, { P::rvSize, 1.0 }, { P::rvDecay, 5.0 }, { P::rvTone, 0.7 }, { P::volume, 0.58 } };
+inline constexpr PresetValue PRESET_159[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.2 }, { P::p1Level, 0.0 }, { P::swLevel, 0.55 }, { P::swShape, 0.0 }, { P::swVoices, 7.0 }, { P::swDetune, 30.0 }, { P::swSpread, 1.0 }, { P::swAtk, 0.9 }, { P::swDec, 1.0 }, { P::swSus, 1.0 }, { P::swRel, 1.8 }, { P::fMode, 1.0 }, { P::cutoff, 4800.0 }, { P::res, 0.1 }, { P::chMix, 0.5 }, { P::chRate, 0.3 }, { P::chDepth, 0.8 }, { P::width, 1.5 }, { P::rvMix, 0.35 }, { P::rvSize, 1.0 }, { P::rvDecay, 4.5 }, { P::rvTone, 0.6 }, { P::volume, 0.55 } };
+inline constexpr PresetValue PRESET_160[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.7 }, { P::frameSync, 1.0 }, { P::tempo, 120.0 }, { P::p1Level, 0.0 }, { P::swLevel, 0.65 }, { P::swShape, 1.0 }, { P::swVoices, 5.0 }, { P::swDetune, 15.0 }, { P::swSpread, 0.9 }, { P::swAtk, 0.002 }, { P::swDec, 0.22 }, { P::swSus, 0.0 }, { P::swRel, 0.15 }, { P::fMode, 1.0 }, { P::cutoff, 3600.0 }, { P::res, 0.35 }, { P::pumpAmt, 0.5 }, { P::pumpDiv, 12.0 }, { P::pumpRel, 0.2 }, { P::chMix, 0.3 }, { P::chDepth, 0.4 }, { P::width, 1.25 }, { P::echoFrames, 18.0 }, { P::echoFb, 7.0 }, { P::echoMix, 0.3 }, { P::echoPing, 1.0 }, { P::rvMix, 0.2 }, { P::rvDecay, 1.8 }, { P::volume, 0.6 } };
+inline constexpr PresetValue PRESET_161[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.5 }, { P::glide, 3.0 }, { P::p1Level, 0.0 }, { P::swLevel, 0.6 }, { P::swShape, 1.0 }, { P::swVoices, 4.0 }, { P::swDetune, 11.0 }, { P::swSpread, 0.5 }, { P::swAtk, 0.01 }, { P::swDec, 0.5 }, { P::swSus, 0.8 }, { P::swRel, 0.3 }, { P::fMode, 1.0 }, { P::cutoff, 3000.0 }, { P::res, 0.55 }, { P::chMix, 0.3 }, { P::chRate, 0.8 }, { P::chDepth, 0.5 }, { P::width, 1.2 }, { P::echoFrames, 9.0 }, { P::echoFb, 7.0 }, { P::echoMix, 0.3 }, { P::echoPing, 1.0 }, { P::rvMix, 0.25 }, { P::rvDecay, 2.2 }, { P::volume, 0.58 } };
+inline constexpr PresetValue PRESET_162[] = { { P::p1Level, 0.0 }, { P::frameSync, 1.0 }, { P::tempo, 90.0 }, { P::wvLevel, 0.6 }, { P::wvOct, 1.0 }, { P::wvAtk, 0.002 }, { P::wvDec, 0.25 }, { P::wvSus, 0.0 }, { P::wvRel, 0.3 }, { P::wv0, 8.0 }, { P::wv1, 9.0 }, { P::wv2, 10.0 }, { P::wv3, 12.0 }, { P::wv4, 13.0 }, { P::wv5, 14.0 }, { P::wv6, 14.0 }, { P::wv7, 15.0 }, { P::wv8, 15.0 }, { P::wv9, 15.0 }, { P::wv10, 14.0 }, { P::wv11, 14.0 }, { P::wv12, 13.0 }, { P::wv13, 12.0 }, { P::wv14, 10.0 }, { P::wv15, 9.0 }, { P::wv16, 8.0 }, { P::wv17, 6.0 }, { P::wv18, 5.0 }, { P::wv19, 3.0 }, { P::wv20, 2.0 }, { P::wv21, 1.0 }, { P::wv22, 1.0 }, { P::wv23, 0.0 }, { P::wv24, 0.0 }, { P::wv25, 0.0 }, { P::wv26, 1.0 }, { P::wv27, 1.0 }, { P::wv28, 2.0 }, { P::wv29, 3.0 }, { P::wv30, 5.0 }, { P::wv31, 6.0 }, { P::lkCodec, 0.3 }, { P::lkKbps, 24.0 }, { P::lkBits, 10.0 }, { P::lkDither, 1.0 }, { P::echoFrames, 18.0 }, { P::echoFb, 9.0 }, { P::echoMix, 0.4 }, { P::echoPing, 1.0 }, { P::rvMix, 0.35 }, { P::rvSize, 1.0 }, { P::rvDecay, 4.0 }, { P::rvTone, 0.5 }, { P::volume, 0.6 } };
+inline constexpr PresetValue PRESET_163[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.3 }, { P::p1Level, 0.0 }, { P::swLevel, 0.45 }, { P::swShape, 0.0 }, { P::swVoices, 3.0 }, { P::swDetune, 38.0 }, { P::swSpread, 0.8 }, { P::swAtk, 1.2 }, { P::swDec, 1.0 }, { P::swSus, 1.0 }, { P::swRel, 2.5 }, { P::wvLevel, 0.3 }, { P::wvFine, 35.0 }, { P::wvAtk, 1.5 }, { P::wvSus, 1.0 }, { P::wvRel, 2.5 }, { P::wv0, 8.0 }, { P::wv1, 10.0 }, { P::wv2, 11.0 }, { P::wv3, 13.0 }, { P::wv4, 14.0 }, { P::wv5, 14.0 }, { P::wv6, 14.0 }, { P::wv7, 13.0 }, { P::wv8, 12.0 }, { P::wv9, 11.0 }, { P::wv10, 10.0 }, { P::wv11, 8.0 }, { P::wv12, 8.0 }, { P::wv13, 7.0 }, { P::wv14, 7.0 }, { P::wv15, 7.0 }, { P::wv16, 8.0 }, { P::wv17, 8.0 }, { P::wv18, 8.0 }, { P::wv19, 8.0 }, { P::wv20, 7.0 }, { P::wv21, 7.0 }, { P::wv22, 5.0 }, { P::wv23, 4.0 }, { P::wv24, 3.0 }, { P::wv25, 2.0 }, { P::wv26, 1.0 }, { P::wv27, 1.0 }, { P::wv28, 1.0 }, { P::wv29, 2.0 }, { P::wv30, 4.0 }, { P::wv31, 5.0 }, { P::fMode, 1.0 }, { P::cutoff, 900.0 }, { P::res, 0.25 }, { P::lkBits, 10.0 }, { P::lkDither, 1.0 }, { P::lkDrift, 0.35 }, { P::lkJitter, 0.2 }, { P::chMix, 0.25 }, { P::chRate, 0.15 }, { P::chDepth, 0.7 }, { P::rvMix, 0.5 }, { P::rvSize, 1.0 }, { P::rvDecay, 6.0 }, { P::rvTone, 0.35 }, { P::volume, 0.6 } };
+inline constexpr PresetValue PRESET_164[] = { { P::p1Level, 0.0 }, { P::frameHz, 120.0 }, { P::nzLevel, 0.8 }, { P::nzOct, 0.0 }, { P::nzMode, 1.0 }, { P::nzEnv, 1.0 }, { P::nzRel, 0.06 }, { P::tvA0, 15.0 }, { P::tvA1, 12.0 }, { P::tvA2, 9.0 }, { P::tvA3, 7.0 }, { P::tvA4, 5.0 }, { P::tvA5, 4.0 }, { P::tvA6, 3.0 }, { P::tvA7, 2.0 }, { P::tvA8, 2.0 }, { P::tvA9, 1.0 }, { P::tvA10, 1.0 }, { P::tvA11, 0.0 }, { P::tvA12, 0.0 }, { P::tvA13, 0.0 }, { P::tvA14, 0.0 }, { P::tvA15, 0.0 }, { P::wvLevel, 0.9 }, { P::wvOct, -2.0 }, { P::wvAtk, 0.001 }, { P::wvDec, 0.35 }, { P::wvSus, 0.0 }, { P::wvRel, 0.2 }, { P::wvPTab, 1.0 }, { P::tp0, 24.0 }, { P::tp1, 14.0 }, { P::tp2, 8.0 }, { P::tp3, 5.0 }, { P::tp4, 3.0 }, { P::tp5, 2.0 }, { P::tp6, 1.0 }, { P::tp7, 0.0 }, { P::tp8, 0.0 }, { P::tp9, 0.0 }, { P::tp10, 0.0 }, { P::tp11, 0.0 }, { P::tp12, 0.0 }, { P::tp13, 0.0 }, { P::tp14, 0.0 }, { P::tp15, 0.0 }, { P::tpLoop, 16.0 }, { P::fMode, 1.0 }, { P::cutoff, 1800.0 }, { P::res, 0.3 }, { P::lkBits, 8.0 }, { P::lkSpeaker, 0.35 }, { P::rvMix, 0.55 }, { P::rvSize, 1.0 }, { P::rvDecay, 4.5 }, { P::rvTone, 0.3 }, { P::volume, 0.6 } };
+inline constexpr PresetValue PRESET_165[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.3 }, { P::p1Level, 0.0 }, { P::swLevel, 0.6 }, { P::swShape, 0.0 }, { P::swOct, -1.0 }, { P::swVoices, 5.0 }, { P::swDetune, 20.0 }, { P::swSpread, 0.8 }, { P::swAtk, 1.5 }, { P::swDec, 1.0 }, { P::swSus, 1.0 }, { P::swRel, 3.0 }, { P::fMode, 1.0 }, { P::cutoff, 700.0 }, { P::res, 0.3 }, { P::lkCodec, 1.0 }, { P::lkKbps, 12.0 }, { P::lkLoss, 0.12 }, { P::lkFrame, 12.0 }, { P::lkConceal, 2.0 }, { P::lkBits, 12.0 }, { P::lkDither, 1.0 }, { P::rvMix, 0.4 }, { P::rvSize, 1.0 }, { P::rvDecay, 5.0 }, { P::rvTone, 0.3 }, { P::volume, 0.6 } };
+inline constexpr PresetValue PRESET_166[] = { { P::p1Level, 0.0 }, { P::nzLevel, 0.15 }, { P::nzOct, 4.0 }, { P::nzMode, 1.0 }, { P::nzAtk, 2.0 }, { P::nzSus, 1.0 }, { P::nzRel, 4.0 }, { P::wvLevel, 0.2 }, { P::wvOct, 2.0 }, { P::wvFine, 14.0 }, { P::wvAtk, 2.0 }, { P::wvSus, 1.0 }, { P::wvRel, 4.0 }, { P::wv0, 8.0 }, { P::wv1, 9.0 }, { P::wv2, 10.0 }, { P::wv3, 12.0 }, { P::wv4, 13.0 }, { P::wv5, 14.0 }, { P::wv6, 14.0 }, { P::wv7, 15.0 }, { P::wv8, 15.0 }, { P::wv9, 15.0 }, { P::wv10, 14.0 }, { P::wv11, 14.0 }, { P::wv12, 13.0 }, { P::wv13, 12.0 }, { P::wv14, 10.0 }, { P::wv15, 9.0 }, { P::wv16, 8.0 }, { P::wv17, 6.0 }, { P::wv18, 5.0 }, { P::wv19, 3.0 }, { P::wv20, 2.0 }, { P::wv21, 1.0 }, { P::wv22, 1.0 }, { P::wv23, 0.0 }, { P::wv24, 0.0 }, { P::wv25, 0.0 }, { P::wv26, 1.0 }, { P::wv27, 1.0 }, { P::wv28, 2.0 }, { P::wv29, 3.0 }, { P::wv30, 5.0 }, { P::wv31, 6.0 }, { P::fMode, 1.0 }, { P::cutoff, 2400.0 }, { P::lkLoss, 0.35 }, { P::lkFrame, 14.0 }, { P::lkConceal, 3.0 }, { P::lkBer, 0.05 }, { P::lkBits, 11.0 }, { P::echoFrames, 30.0 }, { P::echoFb, 11.0 }, { P::echoMix, 0.3 }, { P::echoPing, 1.0 }, { P::rvMix, 0.7 }, { P::rvSize, 1.0 }, { P::rvDecay, 9.0 }, { P::rvTone, 0.4 }, { P::volume, 0.55 } };
+inline constexpr PresetValue PRESET_167[] = { { P::p1Duty, 1.0 }, { P::p1Level, 0.5 }, { P::p1Atk, 0.005 }, { P::p1Dec, 0.4 }, { P::p1Sus, 0.5 }, { P::wvLevel, 0.5 }, { P::wvOct, -1.0 }, { P::wvAtk, 0.005 }, { P::wvDec, 0.4 }, { P::wvSus, 0.6 }, { P::chord, 3.0 }, { P::chordSpeed, 2.0 }, { P::frameHz, 60.0 }, { P::lkLoss, 0.3 }, { P::lkFrame, 6.0 }, { P::lkConceal, 1.0 }, { P::lkJitter, 0.4 }, { P::lkBits, 9.0 }, { P::lkBer, 0.12 }, { P::rvMix, 0.3 }, { P::rvGate, 0.3 }, { P::rvSize, 0.8 }, { P::rvDecay, 2.0 } };
+inline constexpr PresetValue PRESET_168[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.3 }, { P::frameSync, 1.0 }, { P::tempo, 60.0 }, { P::p1Level, 0.0 }, { P::swLevel, 0.7 }, { P::swShape, 0.0 }, { P::swOct, -2.0 }, { P::swVoices, 3.0 }, { P::swDetune, 12.0 }, { P::swSpread, 0.3 }, { P::swAtk, 2.0 }, { P::swDec, 1.0 }, { P::swSus, 1.0 }, { P::swRel, 3.0 }, { P::fMode, 1.0 }, { P::cutoff, 380.0 }, { P::res, 0.35 }, { P::pumpAmt, 0.45 }, { P::pumpDiv, 48.0 }, { P::pumpRel, 1.2 }, { P::rvMix, 0.25 }, { P::rvSize, 0.8 }, { P::rvDecay, 3.0 }, { P::rvTone, 0.3 }, { P::volume, 0.65 } };
+inline constexpr PresetValue PRESET_169[] = { { P::mode, 1.0 }, { P::cycle, 0.0 }, { P::vel, 0.5 }, { P::p1Level, 0.0 }, { P::fmLevel, 0.6 }, { P::fmRatio, 3.5 }, { P::fmIndex, 0.2 }, { P::fmEnvAmt, 0.8 }, { P::fmAtk, 0.002 }, { P::fmDec, 1.5 }, { P::fmSus, 0.0 }, { P::fmRel, 2.0 }, { P::wvLevel, 0.3 }, { P::wvOct, 1.0 }, { P::wvAtk, 0.002 }, { P::wvDec, 0.8 }, { P::wvSus, 0.0 }, { P::wvRel, 1.5 }, { P::wv0, 8.0 }, { P::wv1, 9.0 }, { P::wv2, 10.0 }, { P::wv3, 12.0 }, { P::wv4, 13.0 }, { P::wv5, 14.0 }, { P::wv6, 14.0 }, { P::wv7, 15.0 }, { P::wv8, 15.0 }, { P::wv9, 15.0 }, { P::wv10, 14.0 }, { P::wv11, 14.0 }, { P::wv12, 13.0 }, { P::wv13, 12.0 }, { P::wv14, 10.0 }, { P::wv15, 9.0 }, { P::wv16, 8.0 }, { P::wv17, 6.0 }, { P::wv18, 5.0 }, { P::wv19, 3.0 }, { P::wv20, 2.0 }, { P::wv21, 1.0 }, { P::wv22, 1.0 }, { P::wv23, 0.0 }, { P::wv24, 0.0 }, { P::wv25, 0.0 }, { P::wv26, 1.0 }, { P::wv27, 1.0 }, { P::wv28, 2.0 }, { P::wv29, 3.0 }, { P::wv30, 5.0 }, { P::wv31, 6.0 }, { P::lkCodec, 0.6 }, { P::lkKbps, 20.0 }, { P::lkLoss, 0.25 }, { P::lkFrame, 10.0 }, { P::lkConceal, 2.0 }, { P::echoFrames, 15.0 }, { P::echoFb, 8.0 }, { P::echoMix, 0.35 }, { P::echoPing, 1.0 }, { P::rvMix, 0.5 }, { P::rvSize, 1.0 }, { P::rvDecay, 5.0 }, { P::rvTone, 0.5 }, { P::volume, 0.58 } };
 
-constexpr int NUM_PRESETS = 150;
+constexpr int NUM_PRESETS = 170;
 inline constexpr Preset PRESETS[NUM_PRESETS] = {
   { "Thomas", "chip", PRESET_0, 46 },
   { "Chord Stab", "chip", PRESET_1, 35 },
@@ -823,6 +891,26 @@ inline constexpr Preset PRESETS[NUM_PRESETS] = {
   { "Swarm Array", "weird", PRESET_147, 98 },
   { "Frozen Signal", "weird", PRESET_148, 65 },
   { "Init", "init", nullptr, 0 },
+  { "Neon Pad", "neon", PRESET_150, 29 },
+  { "Neon Lead", "neon", PRESET_151, 29 },
+  { "Neon Bass", "neon", PRESET_152, 20 },
+  { "Sidechain Pad", "neon", PRESET_153, 30 },
+  { "Offbeat Pump", "neon", PRESET_154, 30 },
+  { "Midnight Drive", "neon", PRESET_155, 35 },
+  { "Grid Runner", "neon", PRESET_156, 31 },
+  { "Quiet Square", "neon", PRESET_157, 34 },
+  { "Holo Bloom", "neon", PRESET_158, 34 },
+  { "Wide Open", "neon", PRESET_159, 25 },
+  { "Neon Stab", "neon", PRESET_160, 31 },
+  { "Tunnel Vision", "neon", PRESET_161, 28 },
+  { "Dial Tone", "pluck", PRESET_162, 54 },
+  { "Shipwatching", "pad", PRESET_163, 65 },
+  { "Density", "drum", PRESET_164, 57 },
+  { "Cold Boot", "pad", PRESET_165, 29 },
+  { "Static Sleep", "fx", PRESET_166, 61 },
+  { "Relay", "link", PRESET_167, 23 },
+  { "Hull Hum", "bass", PRESET_168, 27 },
+  { "Last Packet", "glass", PRESET_169, 64 },
 };
 
 } // namespace ftvector

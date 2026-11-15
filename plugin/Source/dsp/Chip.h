@@ -10,7 +10,10 @@
 
 namespace ftvector {
 
-enum { SRC_PULSE = 0, SRC_WAVE = 1, SRC_NOISE = 2, SRC_FM = 3, SRC_PD = 4 };
+enum { SRC_PULSE = 0, SRC_WAVE = 1, SRC_NOISE = 2, SRC_FM = 3, SRC_PD = 4, SRC_SAW = 5 };
+
+/** Most unison voices the saw channel can stack. */
+constexpr int MAX_UNISON = 7;
 
 /** Master clock of the divider, 2A03-style: f = CLOCK / (16 (N + 1)), 11-bit N. */
 constexpr double DIVIDER_CLOCK = 1789773;
@@ -133,6 +136,42 @@ private:
   double phase = 0, acc = 0, held = 0;
   uint32_t lfsr = 1;
   double lfsrAcc = 0, mPhase = 0, mPrev = 0;
+};
+
+/** PolyBLEP residual: smooths the step at a discontinuity, `dt` = phase increment per sample. */
+inline double polyBlep(double t, double dt) {
+  if (t < dt) { t /= dt; return t + t - t * t - 1; }
+  if (t > 1 - dt) { t = (t - 1) / dt; return t * t + t + t + 1; }
+  return 0;
+}
+
+/**
+ * One band-limited saw or square (PolyBLEP) at the host rate. Not on the
+ * internal clock or the divider: the clean, modern oscillator the unison
+ * saw channel stacks. C++ port of BlepOsc in src/dsp/chip.ts.
+ */
+class BlepOsc {
+public:
+  void reset(Rng& rng) { phase = rng.next(); }
+
+  /** Adds n samples into `out` (from 0). `inc` is cycles per sample, below 0.5. */
+  void render(float* out, int n, double inc, bool square) {
+    double ph = phase;
+    for (int i = 0; i < n; i++) {
+      double y;
+      if (square) {
+        y = (ph < 0.5 ? 1 : -1) + polyBlep(ph, inc);
+        double t = ph + 0.5; if (t >= 1) t -= 1;
+        y -= polyBlep(t, inc);
+      } else y = 2 * ph - 1 - polyBlep(ph, inc);
+      out[i] = (float)(out[i] + y);
+      ph += inc; if (ph >= 1) ph -= 1;
+    }
+    phase = ph;
+  }
+
+private:
+  double phase = 0;
 };
 
 } // namespace ftvector

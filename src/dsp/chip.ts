@@ -9,7 +9,10 @@
 
 import { Rng } from './util.ts';
 
-export const SRC_PULSE = 0, SRC_WAVE = 1, SRC_NOISE = 2, SRC_FM = 3, SRC_PD = 4;
+export const SRC_PULSE = 0, SRC_WAVE = 1, SRC_NOISE = 2, SRC_FM = 3, SRC_PD = 4, SRC_SAW = 5;
+
+/** Most unison voices the saw channel can stack. */
+export const MAX_UNISON = 7;
 
 /** Master clock of the divider, 2A03-style: f = CLOCK / (16 (N + 1)), 11-bit N. */
 const DIVIDER_CLOCK = 1789773;
@@ -135,5 +138,40 @@ function pd(ph: number, shape: number, amt: number): number {
       const w = 1 - Math.abs(2 * ph - 1);
       return Math.cos(TWO_PI * ph * (1 + amt * 15)) * w;
     }
+  }
+}
+
+/** PolyBLEP residual: smooths the step at a discontinuity, `dt` = phase increment per sample. */
+function polyBlep(t: number, dt: number): number {
+  if (t < dt) { t /= dt; return t + t - t * t - 1; }
+  if (t > 1 - dt) { t = (t - 1) / dt; return t * t + t + t + 1; }
+  return 0;
+}
+
+/**
+ * One band-limited saw or square (PolyBLEP) at the host rate. Unlike the
+ * chip sources it does not go through the internal clock or the divider:
+ * this is the clean, modern oscillator, and the unison saw channel stacks
+ * several of them.
+ */
+export class BlepOsc {
+  private phase = 0;
+
+  reset(rng: Rng): void { this.phase = rng.next(); }
+
+  /** Adds n samples into `out` (from 0). `inc` is cycles per sample, below 0.5. */
+  render(out: Float32Array, n: number, inc: number, square: boolean): void {
+    let ph = this.phase;
+    for (let i = 0; i < n; i++) {
+      let y: number;
+      if (square) {
+        y = (ph < 0.5 ? 1 : -1) + polyBlep(ph, inc);
+        let t = ph + 0.5; if (t >= 1) t -= 1;
+        y -= polyBlep(t, inc);
+      } else y = 2 * ph - 1 - polyBlep(ph, inc);
+      out[i] += y;
+      ph += inc; if (ph >= 1) ph -= 1;
+    }
+    this.phase = ph;
   }
 }

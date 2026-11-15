@@ -117,6 +117,8 @@ interface Group {
   title?: string; ids: string[]; cls?: string;
   /** the module's main controls, drawn large */
   hero?: boolean;
+  /** an enum with more choices than this is a dropdown instead of a row of buttons */
+  segLimit?: number;
 }
 interface PanelSpec {
   title: string; sub?: string; cls: string; span: number; groups: Group[];
@@ -141,26 +143,27 @@ const linkLine = document.createElement('div'); linkLine.className = 'readline';
  * A channel: its level and main timbre knobs large, then the rest of the
  * source, then the envelope.
  */
-const channelGroups = (pre: string, heroes: string[], extra: string[]): Group[] => [
+const channelGroups = (pre: string, heroes: string[], extra: string[], segLimit?: number): Group[] => [
   { hero: true, ids: [`${pre}Level`, ...heroes] },
-  { title: 'source', ids: [...extra, `${pre}Oct`, `${pre}Semi`, `${pre}Fine`, `${pre}Pan`] },
+  { title: 'source', ids: [...extra, `${pre}Oct`, `${pre}Semi`, `${pre}Fine`, `${pre}Pan`], segLimit },
   { title: 'envelope', ids: [`${pre}Env`, `${pre}PTab`, `${pre}Atk`, `${pre}Dec`, `${pre}Sus`, `${pre}Rel`] },
 ];
 
 const LAYOUT: PanelSpec[] = [
-  // ---- voice: the machine and its six channels
-  { tab: 'voice', title: 'sys', sub: 'the machine', cls: 'sys', span: 7, viz: 'machine', groups: [{ ids: ['mode', 'clock', 'precision', 'cycle', 'vel', 'bend', 'glide'] }] },
-  { tab: 'voice', title: 'chord', sub: 'the 8-bit chord · one key', cls: 'seq', span: 5, viz: 'chord', groups: [{ ids: ['chord', 'chordSpeed', 'chordDir', 'chordOct'] }] },
-  { tab: 'voice', channel: 'p1', title: 'pulse 1', sub: 'clock ÷ n', cls: 'chan', span: 6, viz: 'p1', groups: channelGroups('p1', ['p1Width'], ['p1Duty']) },
-  { tab: 'voice', channel: 'p2', title: 'pulse 2', sub: 'clock ÷ n', cls: 'chan', span: 6, viz: 'p2', groups: channelGroups('p2', ['p2Width'], ['p2Duty', 'p2Xor']) },
-  { tab: 'voice', channel: 'wv', title: 'wave', sub: '32 × 4-bit', cls: 'chan', span: 6, viz: 'wv', groups: channelGroups('wv', [], []) },
-  { tab: 'voice', channel: 'nz', title: 'noise', sub: '15-bit lfsr', cls: 'chan', span: 6, viz: 'nz', groups: channelGroups('nz', [], ['nzMode']) },
-  { tab: 'voice', channel: 'fm', title: 'fm', sub: '2 operators', cls: 'glass', span: 6, viz: 'fm', groups: channelGroups('fm', ['fmIndex', 'fmRatio'], ['fmFb', 'fmEnvAmt']) },
-  { tab: 'voice', channel: 'pd', title: 'pd', sub: 'phase distortion', cls: 'glass', span: 6, viz: 'pd', groups: channelGroups('pd', ['pdAmt'], ['pdShape', 'pdEnvAmt']) },
+  // ---- voice: the machine and its seven channels
+  { tab: 'voice', title: 'sys', sub: 'the machine', cls: 'sys', span: 8, viz: 'machine', groups: [{ ids: ['mode', 'clock', 'precision', 'cycle', 'vel', 'bend', 'glide'] }] },
+  { tab: 'voice', title: 'chord', sub: 'the 8-bit chord · one key', cls: 'seq', span: 4, viz: 'chord', groups: [{ ids: ['chord', 'chordSpeed', 'chordDir', 'chordOct'], segLimit: 6 }] },
+  { tab: 'voice', channel: 'p1', title: 'pulse 1', sub: 'clock ÷ n', cls: 'chan', span: 12, viz: 'p1', groups: channelGroups('p1', ['p1Width'], ['p1Duty']) },
+  { tab: 'voice', channel: 'p2', title: 'pulse 2', sub: 'clock ÷ n', cls: 'chan', span: 12, viz: 'p2', groups: channelGroups('p2', ['p2Width'], ['p2Duty', 'p2Xor']) },
+  { tab: 'voice', channel: 'wv', title: 'wave', sub: '32 × 4-bit', cls: 'chan', span: 12, viz: 'wv', groups: channelGroups('wv', [], []) },
+  { tab: 'voice', channel: 'nz', title: 'noise', sub: '15-bit lfsr', cls: 'chan', span: 12, viz: 'nz', groups: channelGroups('nz', [], ['nzMode']) },
+  { tab: 'voice', channel: 'fm', title: 'fm', sub: '2 operators', cls: 'glass', span: 12, viz: 'fm', groups: channelGroups('fm', ['fmIndex'], ['fmRatio', 'fmFb', 'fmEnvAmt']) },
+  { tab: 'voice', channel: 'pd', title: 'pd', sub: 'phase distortion', cls: 'glass', span: 12, viz: 'pd', groups: channelGroups('pd', ['pdAmt'], ['pdShape', 'pdEnvAmt'], 4) },
+  { tab: 'voice', channel: 'sw', title: 'saw', sub: 'band-limited · unison', cls: 'glass', span: 12, viz: 'sw', groups: channelGroups('sw', [], ['swShape', 'swDetune', 'swVoices', 'swSpread']) },
 
   // ---- motion: the frame clock and everything it ticks
-  { tab: 'motion', title: 'clk', sub: 'frame clock', cls: 'sys', span: 3, viz: 'clock', groups: [{ ids: ['frameHz', 'frameSync', 'tempo'] }] },
-  { tab: 'motion', title: 'arp', sub: 'in frames', cls: 'seq', span: 5, viz: 'arp', groups: [{ ids: ['arpMode', 'arpDiv', 'arpOct', 'arpGate', 'arpHold'] }] },
+  { tab: 'motion', title: 'clk', sub: 'frame clock', cls: 'sys', span: 2, viz: 'clock', groups: [{ ids: ['frameHz', 'frameSync', 'tempo'] }] },
+  { tab: 'motion', title: 'arp', sub: 'in frames', cls: 'seq', span: 6, viz: 'arp', groups: [{ ids: ['arpMode', 'arpDiv', 'arpOct', 'arpGate', 'arpHold'] }] },
   { tab: 'motion', title: 'flt', sub: 'chamberlin svf', cls: 'seq', span: 4, viz: 'svf', groups: [{ hero: true, ids: ['cutoff', 'res'] }, { ids: ['fMode'] }] },
   { tab: 'motion', title: 'r1', sub: '8-bit register', cls: 'reg', span: 4, extra: (b) => b.append(bitRows.r1.el), groups: [{ ids: ['r1Op', 'r1Step', 'r1Mask', 'r1Div', 'r1Pitch', 'r1Duty', 'r1Level', 'r1Cut'] }] },
   { tab: 'motion', title: 'r2', sub: '8-bit register', cls: 'reg', span: 4, extra: (b) => b.append(bitRows.r2.el), groups: [{ ids: ['r2Op', 'r2Step', 'r2Mask', 'r2Div', 'r2Pitch', 'r2Duty', 'r2Level', 'r2Cut'] }] },
@@ -175,15 +178,17 @@ const LAYOUT: PanelSpec[] = [
   { tab: 'tables', title: 'pitch', sub: 'table, semitones', cls: 'tables', span: 3, grid: { pre: 'tp', label: '16 × ±12', cols: 16, min: -12, max: 12, loopId: 'tpLoop' }, groups: [{ ids: ['tpLoop'] }] },
 
   // ---- link: the way out
-  { tab: 'link', title: 'link', sub: 'digital transmission', cls: 'link wide', span: 12, viz: 'link', extra: (b) => b.append(linkLine), groups: [
+  { tab: 'link', title: 'link', sub: 'digital transmission', cls: 'link wide strip', span: 12, viz: 'link', extra: (b) => b.append(linkLine), groups: [
     { title: 'clock', ids: ['lkDrift', 'lkJitter'] },
     { title: 'codec', ids: ['lkCodec', 'lkKbps'] },
     { title: 'packets', ids: ['lkLoss', 'lkFrame', 'lkConceal'] },
     { title: 'words', ids: ['lkBits', 'lkDither', 'lkBer'] },
     { title: 'out', ids: ['lkSpeaker'] },
   ] },
-  { tab: 'link', title: 'echo', sub: 'in frames · 4-bit', cls: 'echo', span: 6, viz: 'echo', groups: [{ hero: true, ids: ['echoMix', 'echoFb'] }, { ids: ['echoFrames', 'echoPing'] }] },
-  { tab: 'link', title: 'plate', sub: 'digital reverb · out', cls: 'out', span: 6, viz: 'plate', groups: [{ hero: true, ids: ['rvMix', 'rvDecay', 'volume'] }, { ids: ['rvSize', 'rvTone', 'rvGate'] }] },
+  { tab: 'link', title: 'echo', sub: 'in frames · 4-bit', cls: 'echo strip', span: 6, viz: 'echo', groups: [{ hero: true, ids: ['echoMix', 'echoFb'] }, { ids: ['echoFrames', 'echoPing'] }] },
+  { tab: 'link', title: 'plate', sub: 'digital reverb · out', cls: 'out strip', span: 6, viz: 'plate', groups: [{ hero: true, ids: ['rvMix', 'rvDecay'] }, { ids: ['volume', 'rvSize', 'rvTone', 'rvGate'] }] },
+  { tab: 'link', title: 'chorus', sub: 'ensemble · width', cls: 'echo strip', span: 6, viz: 'chorus', groups: [{ hero: true, ids: ['chMix', 'chDepth'] }, { ids: ['chRate', 'width'] }] },
+  { tab: 'link', title: 'pump', sub: 'the frame clock ducks the mix', cls: 'seq strip', span: 6, viz: 'pump', groups: [{ hero: true, ids: ['pumpAmt', 'pumpRel'] }, { ids: ['pumpDiv'] }] },
 ];
 
 const vizzes: Viz[] = [];
@@ -269,7 +274,7 @@ for (const spec of LAYOUT) {
     for (const id of g.ids) {
       const def = PARAM_BY_ID[id];
       if (!def) { console.warn('unknown param', id); continue; }
-      const c = makeControl(def, values[id], (v) => onParam(id, v), { hero: g.hero });
+      const c = makeControl(def, values[id], (v) => onParam(id, v), { hero: g.hero, segLimit: g.segLimit });
       controls.set(id, c);
       host.append(c.el);
     }
@@ -281,8 +286,8 @@ for (const spec of LAYOUT) {
 // ---- views: four tabs so the whole machine isn't on screen at once ---------
 
 const TABS: { id: string; name: string; hint: string }[] = [
-  { id: 'voice', name: 'voice', hint: 'machine · chord · six channels' },
-  { id: 'motion', name: 'motion', hint: 'clock · arp · filter · registers' },
+  { id: 'voice', name: 'voice', hint: 'machine · chord · channels' },
+  { id: 'motion', name: 'motion', hint: 'clock · arp · filter · regs' },
   { id: 'tables', name: 'tables', hint: 'wavetable · envelopes · pitch' },
   { id: 'link', name: 'link', hint: 'transmission · echo · plate' },
 ];
@@ -341,7 +346,7 @@ window.addEventListener('keydown', (e) => {
 // sounds saved in this browser.
 const CATEGORY_NAMES: Record<string, string> = {
   user: 'yours', chip: 'chip', pad: 'pads', glass: 'glass & bells', pluck: 'plucks', lead: 'leads', tracker: 'tracker leads',
-  bass: 'bass', arp: 'arps', seq: 'sequences', drum: 'drums & perc', link: 'the link', fx: 'fx', weird: 'weird', init: 'init',
+  bass: 'bass', arp: 'arps', seq: 'sequences', drum: 'drums & perc', link: 'the link', fx: 'fx', weird: 'weird', neon: 'neon', init: 'init',
 };
 const CATEGORY_ORDER = Object.keys(CATEGORY_NAMES);
 const catRank = (tag: string) => { const i = CATEGORY_ORDER.indexOf(tag); return i < 0 ? CATEGORY_ORDER.length : i; };

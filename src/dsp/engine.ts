@@ -17,11 +17,12 @@ import { Link } from './link.ts';
 import { Codec } from './codec.ts';
 import { Plate } from './reverb.ts';
 import { Echo } from './echo.ts';
-import { DCBlock, softClip } from './util.ts';
+import { Chorus } from './chorus.ts';
+import { Pump } from './pump.ts';
+import { CHUNK, DCBlock, softClip } from './util.ts';
 import { defaults, PARAM_BY_ID, type ParamId, type ParamValues } from './params.ts';
 
 const MAX_VOICES = 8;
-const CHUNK = 32;
 const TICKS_PER_BEAT = 24;
 
 export class VectorEngine {
@@ -37,6 +38,8 @@ export class VectorEngine {
   private codec: Codec;
   private plate: Plate;
   private echo: Echo;
+  private chorus: Chorus;
+  private pump: Pump;
   private dcL: DCBlock; private dcR: DCBlock;
   private mod: Mod = { pitchCt: 0, caSemi: 0, duty: 0, level: 1, bend: 0 };
   private cutMul = 1;
@@ -73,6 +76,8 @@ export class VectorEngine {
     this.codec = new Codec(sampleRate);
     this.plate = new Plate(sampleRate);
     this.echo = new Echo(sampleRate);
+    this.chorus = new Chorus(sampleRate);
+    this.pump = new Pump(sampleRate);
     this.dcL = new DCBlock(sampleRate); this.dcR = new DCBlock(sampleRate);
     for (const id in this.p) this.syncTable(id, this.p[id]);
   }
@@ -161,7 +166,7 @@ export class VectorEngine {
     this.allNotesOff();
     for (const v of this.voices) v.kill();
     this.svfL.clear(); this.svfR.clear();
-    this.link.clear(); this.codec.clear(); this.plate.clear(); this.echo.clear();
+    this.link.clear(); this.codec.clear(); this.plate.clear(); this.echo.clear(); this.chorus.clear(); this.pump.clear();
   }
 
   // --------------------------------------------------------- allocation
@@ -221,6 +226,7 @@ export class VectorEngine {
   private tick(): void {
     const p = this.p;
     this.tickCount++;
+    if (p.pumpAmt > 0 && (this.tickCount - 1) % (p.pumpDiv | 0) === 0) this.pump.trigger();
     this.r1.tick(p.r1Op | 0, p.r1Step | 0, p.r1Mask | 0, p.r1Div | 0);
     this.r2.tick(p.r2Op | 0, p.r2Step | 0, p.r2Mask | 0, p.r2Div | 0);
     this.ca.tick(p.caRule | 0, p.caDiv | 0);
@@ -284,9 +290,11 @@ export class VectorEngine {
         this.svfL.process(L, off, count, p.fMode | 0, cut, p.res);
         this.svfR.process(R, off, count, p.fMode | 0, cut, p.res);
       }
+      this.pump.process(L, R, off, count, p.pumpAmt, p.pumpRel);
     }
     const trim = 0.4;
     for (let i = 0; i < n; i++) { L[i] *= trim; R[i] *= trim; }
+    this.chorus.process(L, R, n, p.chRate, p.chDepth, p.chMix);
     this.echo.process(L, R, n, (p.echoFrames | 0) * framePeriod, (p.echoFb | 0) / 16, p.echoPing >= 0.5, p.echoMix);
     // the link
     this.link.clock(L, R, n, p.lkDrift, p.lkJitter);
@@ -294,6 +302,14 @@ export class VectorEngine {
     this.link.receive(L, R, n, p.lkLoss, p.lkFrame, p.lkConceal | 0, p.lkBits | 0, p.lkDither | 0, p.lkBer);
     this.plate.process(L, R, n, p.rvSize, p.rvDecay, p.rvTone, p.rvGate, p.rvMix);
     if (p.lkSpeaker > 0) this.link.speaker(L, R, n, p.lkSpeaker);
+    // stereo width: scale the side signal
+    if (p.width !== 1) {
+      const w = p.width;
+      for (let i = 0; i < n; i++) {
+        const m = (L[i] + R[i]) * 0.5, s = (L[i] - R[i]) * 0.5 * w;
+        L[i] = m + s; R[i] = m - s;
+      }
+    }
     // volume, DC, safety clip, meters, scope
     const vol = p.volume * p.volume * 1.6;
     let pl = 0, pr = 0;
