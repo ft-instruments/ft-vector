@@ -1,5 +1,5 @@
-// The filter and the time effects: Chamberlin SVF, the frame echo and the
-// gated plate. C++ ports of src/dsp/svf.ts, echo.ts and reverb.ts.
+// The filter and the time effects: Chamberlin SVF, the frame echo, the chorus, the pump and the
+// gated plate. C++ ports of src/dsp/svf.ts, echo.ts, reverb.ts, chorus.ts and pump.ts.
 // Buffers are allocated in the constructors, never while processing.
 #pragma once
 
@@ -15,31 +15,37 @@ class SVF {
 public:
   explicit SVF(double sampleRate) : fs(sampleRate) {}
 
-  void clear() { lp = bp = 0; }
+  void clear() { lp = bp = 0; fPrev = -1; }
 
   /** In place. mode 0 off, 1 lp, 2 bp, 3 hp. */
   void process(float* buf, int off, int n, int mode, double cutoff, double res) {
     if (mode == 0) return;
     double f = 2 * std::sin(PI * cutoff / (fs * 2));
     if (f > 0.99) f = 0.99;
-    const double q = 1 - res * 0.985;
+    const double qT = 1 - res * 0.985;
+    // ramp the coefficients across the chunk so cutoff sweeps don't zipper
+    if (fPrev < 0) { fPrev = f; qPrev = qT; }
+    double fc = fPrev, q = qPrev;
+    const double df = (f - fc) / n, dq = (qT - q) / n;
     double l = lp, b = bp, h = 0;
     for (int i = off; i < off + n; i++) {
+      fc += df; q += dq;
       const double x = buf[i];
       for (int k = 0; k < 2; k++) {
-        l += f * b;
+        l += fc * b;
         h = x - l - q * b;
-        b += f * h;
+        b += fc * h;
       }
       // keep the state sane if driven hard
       if (b > 4) b = 4; else if (b < -4) b = -4;
       buf[i] = (float)(mode == 1 ? l : mode == 2 ? b : h);
     }
-    lp = l; bp = b;
+    lp = l; bp = b; fPrev = f; qPrev = qT;
   }
 
 private:
   double lp = 0, bp = 0;
+  double fPrev = -1, qPrev = 0;   // last chunk's coefficients (fPrev < 0: not primed yet)
   double fs;
 };
 
@@ -197,6 +203,85 @@ private:
   double fs;
   double curSize = -1, curDecay = -1;
   double inEnv = 0, gateEnv = 0, gateHold = 0;
+};
+
+// ---- chorus.ts -----------------------------------------------------------------
+
+/** Ensemble chorus: three modulated taps per side, left and right offset in phase. A no-op at mix 0. */
+class Chorus {
+public:
+  explicit Chorus(double sampleRate) : fs(sampleRate), len((int)std::ceil(sampleRate * 0.04) + 8) {
+    bufL.assign((size_t)len, 0.f); bufR.assign((size_t)len, 0.f);
+  }
+
+  void clear() { std::fill(bufL.begin(), bufL.end(), 0.f); std::fill(bufR.begin(), bufR.end(), 0.f); }
+
+  /** In place. `rate` in Hz, `depth` 0..1, `mix` 0..1. */
+  void process(float* L, float* R, int n, double rate, double depth, double mix) {
+    constexpr int TAPS = 3;
+    const double inc = rate / fs;
+    const double base = 0.014 * fs, dep = depth * 0.008 * fs;
+    const bool on = mix > 0;
+    int i0 = idx;
+    double ph = phase;
+    for (int i = 0; i < n; i++) {
+      bufL[(size_t)i0] = L[i]; bufR[(size_t)i0] = R[i];
+      if (on) {
+        double wl = 0, wr = 0;
+        for (int k = 0; k < TAPS; k++) {
+          const double t = ph + (double)k / TAPS;
+          wl += readDelay(bufL.data(), len, i0, base + dep * std::sin(2 * PI * t));
+          wr += readDelay(bufR.data(), len, i0, base + dep * std::sin(2 * PI * (t + 1.0 / 6)));
+        }
+        L[i] = (float)((double)L[i] * (1 - mix * 0.5) + (wl / TAPS) * mix * 0.7);
+        R[i] = (float)((double)R[i] * (1 - mix * 0.5) + (wr / TAPS) * mix * 0.7);
+      }
+      ph += inc; if (ph >= 1) ph -= 1;
+      if (++i0 >= len) i0 = 0;
+    }
+    idx = i0; phase = ph;
+  }
+
+private:
+  double fs;
+  int len;
+  std::vector<float> bufL, bufR;
+  int idx = 0;
+  double phase = 0;
+};
+
+// ---- pump.ts -------------------------------------------------------------------
+
+/** Sidechain-style ducker whose kick is the frame clock. */
+class Pump {
+public:
+  explicit Pump(double sampleRate) : fs(sampleRate) {}
+
+  void clear() { e = 0; attacking = false; }
+
+  /** A frame that should hit. */
+  void trigger() { attacking = true; }
+
+  /** In place over [off, off + n). `amt` 0..1 depth, `rel` seconds to recover. */
+  void process(float* L, float* R, int off, int n, double amt, double rel) {
+    if (amt <= 0) { e = 0; attacking = false; return; }
+    const double atk = 1 / (0.004 * fs);
+    const double dec = std::exp(-3 / (rel * fs));
+    double ev = e;
+    bool a = attacking;
+    for (int i = off; i < off + n; i++) {
+      if (a) { ev += atk; if (ev >= 1) { ev = 1; a = false; } }
+      else { ev *= dec; if (ev < 1e-9) ev = 0; }
+      const double g = 1 - amt * ev;
+      L[i] = (float)((double)L[i] * g); R[i] = (float)((double)R[i] * g);
+    }
+    e = ev; attacking = a;
+  }
+
+private:
+  double fs;
+  double e = 0;
+  bool attacking = false;
 };
 
 } // namespace ftvector

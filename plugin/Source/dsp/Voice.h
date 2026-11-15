@@ -45,7 +45,8 @@ public:
   Voice(double sampleRate, uint32_t seed, const Tables& tables)
     : ch { Channel(sampleRate, SRC_PULSE, tables.wave), Channel(sampleRate, SRC_PULSE, tables.wave),
            Channel(sampleRate, SRC_WAVE, tables.wave), Channel(sampleRate, SRC_NOISE, tables.wave),
-           Channel(sampleRate, SRC_FM, tables.wave), Channel(sampleRate, SRC_PD, tables.wave) },
+           Channel(sampleRate, SRC_FM, tables.wave), Channel(sampleRate, SRC_PD, tables.wave),
+           Channel(sampleRate, SRC_SAW, tables.wave) },
       rng(seed * 7919 + 17), fs(sampleRate) {}
 
   bool active() const {
@@ -69,10 +70,10 @@ public:
     if (!retrigger) return;
     volPos.reset(); pitPos.reset();
     chordStep = 0; chordDir = 1; chordCount = 0; chordSemi = 0;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < NUM_CHANNELS; i++) {
       Channel& c = ch[i];
       if (p[CHANNEL_IDS[i].level] <= 0) { c.env.kill(); continue; }
-      c.osc.reset(rng);
+      if (i == SAW) for (auto& s : c.saw) s.reset(rng); else c.osc.reset(rng);
       c.env.gate();
     }
   }
@@ -120,7 +121,7 @@ public:
     const int div = toInt(p[P::tabDiv]);
     // one position drives both volume tables: table A's loop unless only B is in use
     bool usesA = false, usesB = false;
-    for (int i = 0; i < 6; i++) { const int e = toInt(p[CHANNEL_IDS[i].env]); if (e == 1) usesA = true; else if (e == 2) usesB = true; }
+    for (int i = 0; i < NUM_CHANNELS; i++) { const int e = toInt(p[CHANNEL_IDS[i].env]); if (e == 1) usesA = true; else if (e == 2) usesB = true; }
     volPos.tick(div, usesA || !usesB ? volLoopA : volLoopB);
     pitPos.tick(div, toInt(p[P::tpLoop]));
   }
@@ -131,7 +132,7 @@ public:
     const double ratio = clockHz / fs;
     const double velGain = 1 - p[P::vel] + p[P::vel] * vel;
     const double basePitch = pitch + chordSemi + mod.bend + mod.pitchCt * 0.01 + mod.caSemi;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < NUM_CHANNELS; i++) {
       Channel& c = ch[i];
       const ChannelIds& id = CHANNEL_IDS[i];
       OscParams& q = c.q;
@@ -145,6 +146,7 @@ public:
       // pitch
       double pt = basePitch + p[id.oct] * 12 + p[id.semi] + p[id.fine] * 0.01;
       if (p[id.ptab] >= 0.5) pt += tabs.tp[pitPos.pos];
+      if (i == SAW) { renderSaw(c, id, pt, lvl * velGain * env * mod.level * accent, L, R, off, n, p); continue; }
       double f = dividerTune(midiToFreq(pt), p[P::precision]);
       if (f > clockHz * 0.5) f = clockHz * 0.5;
       q.ratio = ratio;
@@ -195,18 +197,52 @@ public:
   }
 
 private:
+  static constexpr int SAW = NUM_CHANNELS - 1;   // the saw channel is the last one
+
   struct Channel {
     ChipOsc osc;
+    BlepOsc saw[MAX_UNISON];   // the unison stack (saw channel only)
     ADSR env;
     double gain = 0;   // last chunk's gain, for ramping
     OscParams q;
     Channel(double sampleRate, int type, const float* wave) : env(sampleRate) { q.type = type; q.wave = wave; }
   };
 
-  Channel ch[6];
+  /**
+   * The saw channel: a stack of band-limited saws (or squares), detuned
+   * evenly across ±detune cents and fanned across the stereo field. It
+   * ignores the chip clock and the divider: this one is meant to be clean.
+   */
+  void renderSaw(Channel& c, const ChannelIds& id, double pt, double gain, float* L, float* R, int off, int n, const ParamValues& p) {
+    const int nv = std::min(MAX_UNISON, std::max(1, toInt(p[P::swVoices])));
+    const bool square = toInt(p[P::swShape]) == 1;
+    const double detune = p[P::swDetune] * 0.01, spread = p[P::swSpread];
+    const double norm = 1 / std::sqrt((double)nv);
+    const double dg = (gain - c.gain) / n;
+    for (int u = 0; u < nv; u++) {
+      const double pos = nv > 1 ? (2.0 * u) / (nv - 1) - 1 : 0;
+      double inc = midiToFreq(pt + pos * detune) / fs;
+      if (inc > 0.45) inc = 0.45;
+      std::fill(tmp, tmp + n, 0.f);
+      c.saw[u].render(tmp, n, inc, square);
+      double pan = p[id.pan] + pos * spread;
+      if (pan > 1) pan = 1; else if (pan < -1) pan = -1;
+      const double gl = std::cos((pan + 1) * 0.25 * PI) * 1.2 * norm, gr = std::sin((pan + 1) * 0.25 * PI) * 1.2 * norm;
+      double g = c.gain;
+      for (int k = 0; k < n; k++) {
+        g += dg;
+        const double s = tmp[k] * g;
+        L[off + k] = (float)(L[off + k] + s * gl);
+        R[off + k] = (float)(R[off + k] + s * gr);
+      }
+    }
+    c.gain = gain;
+  }
+
+  Channel ch[NUM_CHANNELS];
   int chordStep = 0, chordDir = 1, chordCount = 0;
-  float tmp[64] = {};
-  float p1[64] = {};   // pulse 1's last chunk, for the xor
+  float tmp[CHUNK] = {};
+  float p1[CHUNK] = {};   // pulse 1's last chunk, for the xor
   Rng rng;
   double fs;
 };

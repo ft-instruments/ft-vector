@@ -34,7 +34,6 @@ inline ParamValues defaultParams() {
 class Engine {
 public:
   static constexpr int MAX_VOICES = 8;
-  static constexpr int CHUNK = 32;
   static constexpr double TICKS_PER_BEAT = 24;
 
   ParamValues p = defaultParams();
@@ -47,7 +46,7 @@ public:
   uint8_t display[16] = {};
 
   explicit Engine(double sampleRate)
-    : svfL(sampleRate), svfR(sampleRate), link(sampleRate), codec(sampleRate), plate(sampleRate), echo(sampleRate),
+    : svfL(sampleRate), svfR(sampleRate), link(sampleRate), codec(sampleRate), plate(sampleRate), echo(sampleRate), chorus(sampleRate), pump(sampleRate),
       dcL(sampleRate), dcR(sampleRate), arpOut(*this), fs(sampleRate) {
     for (int i = 0; i < MAX_VOICES; i++) voices[i] = std::make_unique<Voice>(sampleRate, (uint32_t)(i + 1), tables);
     for (int i = 0; i < NUM_PARAMS; i++) syncTable(i, p[i]);
@@ -139,7 +138,7 @@ public:
     allNotesOff();
     for (auto& v : voices) v->kill();
     svfL.clear(); svfR.clear();
-    link.clear(); codec.clear(); plate.clear(); echo.clear();
+    link.clear(); codec.clear(); plate.clear(); echo.clear(); chorus.clear(); pump.clear();
   }
 
   // ---------------------------------------------------------------- audio
@@ -167,9 +166,11 @@ public:
         svfL.process(L, off, count, toInt(p[P::fMode]), cut, p[P::res]);
         svfR.process(R, off, count, toInt(p[P::fMode]), cut, p[P::res]);
       }
+      pump.process(L, R, off, count, p[P::pumpAmt], p[P::pumpRel]);
     }
     const double trim = 0.4;
     for (int i = 0; i < n; i++) { L[i] = (float)(L[i] * trim); R[i] = (float)(R[i] * trim); }
+    chorus.process(L, R, n, p[P::chRate], p[P::chDepth], p[P::chMix]);
     echo.process(L, R, n, toInt(p[P::echoFrames]) * framePeriod, toInt(p[P::echoFb]) / 16.0, p[P::echoPing] >= 0.5, p[P::echoMix]);
     // the link
     link.clock(L, R, n, p[P::lkDrift], p[P::lkJitter]);
@@ -177,6 +178,14 @@ public:
     link.receive(L, R, n, p[P::lkLoss], p[P::lkFrame], toInt(p[P::lkConceal]), toInt(p[P::lkBits]), toInt(p[P::lkDither]), p[P::lkBer]);
     plate.process(L, R, n, p[P::rvSize], p[P::rvDecay], p[P::rvTone], p[P::rvGate], p[P::rvMix]);
     if (p[P::lkSpeaker] > 0) link.speaker(L, R, n, p[P::lkSpeaker]);
+    // stereo width: scale the side signal
+    if (p[P::width] != 1) {
+      const double w = p[P::width];
+      for (int i = 0; i < n; i++) {
+        const double m = ((double)L[i] + R[i]) * 0.5, s = ((double)L[i] - R[i]) * 0.5 * w;
+        L[i] = (float)(m + s); R[i] = (float)(m - s);
+      }
+    }
     // volume, DC, safety clip, meters, scope
     const double vol = p[P::volume] * p[P::volume] * 1.6;
     double pl = 0, pr = 0;
@@ -276,6 +285,7 @@ private:
 
   void tick() {
     tickCount++;
+    if (p[P::pumpAmt] > 0 && (tickCount - 1) % (uint32_t)toInt(p[P::pumpDiv]) == 0) pump.trigger();
     r1.tick(toInt(p[P::r1Op]), toInt(p[P::r1Step]), toInt(p[P::r1Mask]), toInt(p[P::r1Div]));
     r2.tick(toInt(p[P::r2Op]), toInt(p[P::r2Step]), toInt(p[P::r2Mask]), toInt(p[P::r2Div]));
     ca.tick(toInt(p[P::caRule]), toInt(p[P::caDiv]));
@@ -327,6 +337,8 @@ private:
   Codec codec;
   Plate plate;
   Echo echo;
+  Chorus chorus;
+  Pump pump;
   DCBlock dcL, dcR;
   Mod mod;
   double cutMul = 1;

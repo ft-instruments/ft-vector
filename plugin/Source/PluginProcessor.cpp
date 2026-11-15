@@ -50,7 +50,7 @@ juce::String format(const ParamDef& p, double v) {
 juce::String hostName(const ParamDef& p) {
   static const std::pair<const char*, const char*> groups[] = {
     { "chip", "Sys" }, { "chord", "Chord" }, { "p1", "Pulse 1" }, { "p2", "Pulse 2" }, { "wv", "Wave" },
-    { "nz", "Noise" }, { "fm", "FM" }, { "pd", "PD" }, { "tables", "Tables" }, { "frame", "Clock" },
+    { "nz", "Noise" }, { "fm", "FM" }, { "pd", "PD" }, { "sw", "Saw" }, { "chorus", "Chorus" }, { "pump", "Pump" }, { "tables", "Tables" }, { "frame", "Clock" },
     { "r1", "R1" }, { "r2", "R2" }, { "ca", "Automaton" }, { "arp", "Arp" }, { "echo", "Echo" },
     { "filter", "Filter" }, { "link", "Link" }, { "reverb", "Plate" }, { "out", "Out" },
   };

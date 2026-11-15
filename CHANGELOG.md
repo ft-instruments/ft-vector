@@ -4,6 +4,18 @@ All notable changes to ft-vector. Format: [Keep a Changelog](https://keepachange
 
 ## Unreleased
 
+### Added
+- Saw channel: a seventh, band-limited (PolyBLEP) saw/square source with 1–7 unison voices, detune and stereo spread. It runs at the host rate, outside the chip clock and divider. Off by default, so existing presets sound the same. Its parameters are appended after the existing ones.
+- Ensemble chorus (mix, rate, depth) and a stereo width control (0 to 200%), both off at their defaults.
+- Pump: a sidechain-style duck triggered by the frame clock every N frames, with a depth and a release. Off by default.
+- "neon" preset category (12 presets) built on the saw channel, chorus, width and pump.
+- Eight dark, sparse presets across the existing categories: Dial Tone, Shipwatching, Density, Cold Boot, Static Sleep, Relay, Hull Hum, Last Packet.
+
+### Changed
+- Interface density and legibility pass. The seven channels are now full-width strips (picture, then level, source and envelope on one row), about half the height of the old stacked panels, and a folded channel is a single line. Hero knobs sit beside the other controls instead of on a row of their own, the arp, filter, echo, plate, chorus and pump modules fit on fewer rows, and the chord choice is a dropdown. Text is larger and brighter (labels and readouts were 9.5–10px at about 40% contrast), and the words drawn inside the pictures sit on a dark plate.
+- Filter cutoff and resonance now ramp across each 32-sample chunk instead of stepping, so cutoff sweeps no longer zipper.
+- `CHUNK` is a shared constant, and the voice scratch buffers are sized from it.
+
 ## [0.1.0] - 2026-11-01
 
 First tracked release. The version file already said 0.1.0, so this tags the project as it stands today, with the open-source and cross-platform work below.

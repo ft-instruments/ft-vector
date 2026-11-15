@@ -183,3 +183,62 @@
   margin-bottom: calc((var(--ui-scale, 1) - 1) * var(--ui-h, 0px));
   transform: translateX(var(--ui-x, 0px)) scale(var(--ui-scale, 1)); transform-origin: 0 0;
 }
+
+/* ---------- legibility: the family's 9.5px / 34% grey labels were hard to read on this dark ground */
+:root {
+  --dim: rgba(208, 220, 246, 0.82);
+  --faint: rgba(190, 205, 240, 0.55);
+}
+.knob { width: calc(var(--size) + 20px); }
+.knob .label { font-size: 10.5px; letter-spacing: 0; }
+.knob .readout { font-size: 11px; color: var(--dim); }
+.knob.hero .readout { font-size: 11px; letter-spacing: -0.03em; }
+.knob.hero .label { font-size: 11px; }
+.selector .label, .toggle .label, .picker .label { font-size: 10.5px; }
+.seg button { font-size: 11.5px; padding: 5px 10px; }
+.subgroup .title { font-size: 10.5px; }
+.panel .head::before, .panel .head small, .panel .head .meta { font-size: 10.5px; }
+.panel h2 { font-size: 14px; }
+.tab .n, .tab small { font-size: 10.5px; }
+.hint, .readline, .grid .label, .bitrow .label { font-size: 11px; }
+.bitrow .val { font-size: 14px; }
+footer .hint { color: var(--dim); }
+
+/* ---------- density: hero knobs sit beside the rest instead of on a row of their own */
+.panel .subgroup.hero { width: auto; margin: 0 8px 0 0; padding: 0 12px 0 0; border-bottom: none; border-right: 1px dashed var(--line-strong); }
+.panel .subgroup.hero:last-child { border-right: none; margin-right: 0; padding-right: 0; }
+.viz { height: 64px; margin-bottom: 8px; }
+.viz.tall { height: 84px; }
+.panel.chan .viz, .panel.glass .viz { height: 56px; }
+.panel .head { margin-bottom: 8px; padding-bottom: 6px; }
+
+/* tighter gutters, so a channel's big knobs and its source row share one line (they missed by a few px) */
+.knob { width: calc(var(--size) + 18px); }
+.subgroup { padding-right: 6px; margin-right: 4px; }
+.panel .subgroup.hero { margin-right: 4px; padding-right: 10px; }
+.subgroup.hero .row { gap: 4px 8px; }
+.panel.chan .seg button, .panel.glass .seg button { padding: 5px 8px; }
+.knob.hero { width: calc(var(--size) + 8px); }
+.panel.chan .selector, .panel.glass .selector { padding-left: 0; padding-right: 2px; }
+.panel.chan .body, .panel.glass .body { column-gap: 0; }
+/* a knob is at least its dial wide, and grows when its label is longer */
+.knob:not(.hero) { width: auto; min-width: calc(var(--size) + 8px); padding-left: 2px; padding-right: 2px; }
+
+/* the seven channels are strips: the picture on the left, then level, source and envelope side by side.
+   A strip is about a third of the height the stacked layout was, and the same controls line up from
+   one channel to the next. A folded channel is one line. */
+.panel.chan, .panel.glass, .panel.strip { display: grid; grid-template-columns: 250px minmax(0, 1fr); column-gap: 14px; align-content: start; }
+.panel.chan > .head, .panel.glass > .head, .panel.strip > .head { grid-column: 1 / -1; }
+.panel.chan > .viz, .panel.glass > .viz, .panel.strip > .viz { grid-column: 1; align-self: stretch; height: auto; min-height: 128px; margin: 0; contain: size; }
+.panel.chan > .body, .panel.glass > .body, .panel.strip > .body { grid-column: 2; align-items: flex-end; }
+/* the half-width modules (echo, plate, chorus, pump): the picture takes whatever the knobs leave */
+.panel.strip { grid-template-columns: minmax(170px, 1fr) max-content; }
+.panel.strip > .body { flex-wrap: nowrap; }
+/* and the link, which is as wide as the page, gets a picture a little wider than a channel's */
+.panel.link.strip { grid-template-columns: 270px minmax(0, 1fr); }
+.panel.link.strip > .body { flex-wrap: wrap; }
+/* the pictures carry a caption band under the graph, so they are taller than before */
+.viz { height: 82px; }
+.panel.chan .picker, .panel.glass .picker { width: 132px; }
+
+.panel.seq .picker { width: 104px; }

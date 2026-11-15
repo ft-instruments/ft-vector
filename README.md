@@ -144,7 +144,7 @@ real failure mode with a physical parameter; all at zero → transparent.
 |---|---|
 | `svf.ts` | Chamberlin state-variable filter (lp / bp / hp), run twice per sample. Global, modulated by the registers. |
 | `reverb.ts` | **Plate**: Mycelia's 8-line FDN skeleton re-tuned — short bright lines, light modulation, and a **gate** that holds the tail for 20–400 ms after the input stops, then cuts. |
-| `voice.ts` | One voice = the six channels playing one note. Levels, pitches and duties are computed once per 32-sample chunk and ramped; envelopes step per chunk. |
+| `voice.ts` | One voice = the seven channels playing one note. Levels, pitches and duties are computed once per 32-sample chunk and ramped; envelopes step per chunk. |
 | `arp.ts` | The frame-counted note arp (up / down / up-down / random / as played, 1–4 octaves, gate, hold). |
 | `echo.ts` | The frame echo. |
 | `engine.ts` | Voice allocation (chip: one voice with key cycling; modern: 8 voices, quiet-first stealing), sustain, bend, the frame tick, the effect chain, DC block, safety clip. `process(L, R, n)` is the whole instrument. |
@@ -207,7 +207,7 @@ magenta for the glass sources, violet for the registers, acid for
 sequencing, orange for the tables, red for the link), exposed as
 `--accent` / `--accent-rgb`, which every canvas reads.
 
-Four views (`1`–`4`): **voice** (machine, chord, the six channels; channels
+Four views (`1`–`4`): **voice** (machine, chord, the seven channels; channels
 that are off fold to one line), **motion** (frame clock, arp, filter,
 registers, automaton), **tables**, **link** (transmission, echo, plate).
 Most modules carry a picture of what they do, drawn with the chip's own

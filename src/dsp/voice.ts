@@ -3,13 +3,15 @@
 // computed once per 32-sample chunk (and ramped over it), which is how a
 // chip driven by a frame interrupt behaves anyway.
 
-import { ChipOsc, dividerTune, SRC_FM, SRC_NOISE, SRC_PD, SRC_PULSE, SRC_WAVE, type OscParams } from './chip.ts';
+import { BlepOsc, ChipOsc, dividerTune, MAX_UNISON, SRC_FM, SRC_NOISE, SRC_PD, SRC_PULSE, SRC_SAW, SRC_WAVE, type OscParams } from './chip.ts';
 import { ADSR, TablePos } from './registers.ts';
-import { midiToFreq, Rng } from './util.ts';
+import { CHUNK, midiToFreq, Rng } from './util.ts';
 import { CHANNELS, CHORD_SEMIS, CLOCK_HZ, DUTY_VALUES, type ParamValues } from './params.ts';
 
-const TYPES = [SRC_PULSE, SRC_PULSE, SRC_WAVE, SRC_NOISE, SRC_FM, SRC_PD];
+const TYPES = [SRC_PULSE, SRC_PULSE, SRC_WAVE, SRC_NOISE, SRC_FM, SRC_PD, SRC_SAW];
 const PRE = CHANNELS.map((c) => c.pre);
+const NCH = CHANNELS.length;
+const SAW = NCH - 1;   // the saw channel is the last one
 
 /** What the engine computes per chunk for every voice. */
 export interface Mod {
@@ -29,11 +31,14 @@ export interface Tables {
 
 class Channel {
   osc = new ChipOsc();
+  /** the unison stack (saw channel only) */
+  saw: BlepOsc[] = [];
   env: ADSR;
   gain = 0;            // last chunk's gain, for ramping
   q: OscParams;
   constructor(sampleRate: number, type: number, wave: Float32Array) {
     this.env = new ADSR(sampleRate);
+    if (type === SRC_SAW) for (let i = 0; i < MAX_UNISON; i++) this.saw.push(new BlepOsc());
     this.q = { type, ratio: 1, inc: 0, duty: 0.5, wave, noiseShort: false, noiseInc: 0, fmRatio: 2, fmIndex: 0, fmFb: 0, pdShape: 0, pdAmt: 0 };
   }
 }
@@ -54,15 +59,15 @@ export class Voice {
   volPos = new TablePos();
   pitPos = new TablePos();
   private ch: Channel[] = [];
-  private tmp = new Float32Array(64);
-  private p1 = new Float32Array(64);       // pulse 1's last chunk, for the xor
+  private tmp = new Float32Array(CHUNK);
+  private p1 = new Float32Array(CHUNK);       // pulse 1's last chunk, for the xor
   private rng: Rng;
   private readonly fs: number;
 
   constructor(sampleRate: number, seed: number, tables: Tables) {
     this.fs = sampleRate;
     this.rng = new Rng(seed * 7919 + 17);
-    for (let i = 0; i < 6; i++) this.ch.push(new Channel(sampleRate, TYPES[i], tables.wave));
+    for (let i = 0; i < NCH; i++) this.ch.push(new Channel(sampleRate, TYPES[i], tables.wave));
   }
 
   get active(): boolean {
@@ -85,10 +90,10 @@ export class Voice {
     if (!retrigger) return;
     this.volPos.reset(); this.pitPos.reset();
     this.chordStep = 0; this.chordDir = 1; this.chordCount = 0; this.chordSemi = 0;
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < NCH; i++) {
       const c = this.ch[i];
       if (p[PRE[i] + 'Level'] <= 0) { c.env.kill(); continue; }
-      c.osc.reset(this.rng);
+      if (i === SAW) for (const s of c.saw) s.reset(this.rng); else c.osc.reset(this.rng);
       c.env.gate();
     }
   }
@@ -135,7 +140,7 @@ export class Voice {
     // one position drives both volume tables; loop point depends on which table a channel reads,
     // so keep it simple: table A's loop unless only B is in use
     let usesA = false, usesB = false;
-    for (let i = 0; i < 6; i++) { const e = p[PRE[i] + 'Env'] | 0; if (e === 1) usesA = true; else if (e === 2) usesB = true; }
+    for (let i = 0; i < NCH; i++) { const e = p[PRE[i] + 'Env'] | 0; if (e === 1) usesA = true; else if (e === 2) usesB = true; }
     this.volPos.tick(div, usesA || !usesB ? volLoopA : volLoopB);
     this.pitPos.tick(div, p.tpLoop | 0);
   }
@@ -147,7 +152,7 @@ export class Voice {
     const velGain = 1 - p.vel + p.vel * this.vel;
     const tmp = this.tmp;
     const basePitch = this.pitch + this.chordSemi + mod.bend + mod.pitchCt * 0.01 + mod.caSemi;
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < NCH; i++) {
       const c = this.ch[i], pre = PRE[i], q = c.q;
       const lvl = p[pre + 'Level'];
       if (!c.env.active) { c.gain = 0; continue; }
@@ -159,6 +164,7 @@ export class Voice {
       // pitch
       let pitch = basePitch + p[pre + 'Oct'] * 12 + p[pre + 'Semi'] + p[pre + 'Fine'] * 0.01;
       if (p[pre + 'PTab'] >= 0.5) pitch += tabs.tp[this.pitPos.pos];
+      if (i === SAW) { this.renderSaw(c, pre, pitch, lvl * velGain * env * mod.level * this.accent, L, R, off, n, p); continue; }
       let f = dividerTune(midiToFreq(pitch), p.precision);
       if (f > clockHz * 0.5) f = clockHz * 0.5;
       q.ratio = ratio;
@@ -206,5 +212,36 @@ export class Voice {
       }
       c.gain = gain;
     }
+  }
+  /**
+   * The saw channel: a stack of band-limited saws (or squares), detuned
+   * evenly across ±detune cents and fanned across the stereo field. It
+   * ignores the chip clock and the divider: this one is meant to be clean.
+   */
+  private renderSaw(c: Channel, pre: string, pitch: number, gain: number, L: Float32Array, R: Float32Array, off: number, n: number, p: ParamValues): void {
+    const tmp = this.tmp;
+    const nv = Math.min(MAX_UNISON, Math.max(1, p.swVoices | 0));
+    const square = (p.swShape | 0) === 1;
+    const detune = p.swDetune * 0.01, spread = p.swSpread;
+    const norm = 1 / Math.sqrt(nv);
+    const dg = (gain - c.gain) / n;
+    for (let u = 0; u < nv; u++) {
+      const pos = nv > 1 ? (2 * u) / (nv - 1) - 1 : 0;
+      let inc = midiToFreq(pitch + pos * detune) / this.fs;
+      if (inc > 0.45) inc = 0.45;
+      tmp.fill(0, 0, n);
+      c.saw[u].render(tmp, n, inc, square);
+      let pan = p[pre + 'Pan'] + pos * spread;
+      if (pan > 1) pan = 1; else if (pan < -1) pan = -1;
+      const gl = Math.cos((pan + 1) * 0.25 * Math.PI) * 1.2 * norm, gr = Math.sin((pan + 1) * 0.25 * Math.PI) * 1.2 * norm;
+      let g = c.gain;
+      for (let k = 0; k < n; k++) {
+        g += dg;
+        const s = tmp[k] * g;
+        L[off + k] += s * gl;
+        R[off + k] += s * gr;
+      }
+    }
+    c.gain = gain;
   }
 }

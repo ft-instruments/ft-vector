@@ -19,6 +19,9 @@ namespace ftvector {
 
 constexpr double PI = 3.141592653589793;
 
+/** Samples per control chunk: levels, pitches and filter coefficients update once per chunk. */
+constexpr int CHUNK = 32;
+
 using ParamValues = std::array<double, NUM_PARAMS>;
 
 /** JS Math.round: to the nearest integer, halves towards +infinity (std::round goes away from zero). */

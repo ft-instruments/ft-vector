@@ -26,6 +26,7 @@ export const DUTIES = ['12.5', '25', '50', '75', 'free'];
 export const DUTY_VALUES = [0.125, 0.25, 0.5, 0.75];
 export const ENV_MODES = ['adsr', 'tab A', 'tab B'];
 export const NOISE_MODES = ['short', 'long'];
+export const SAW_SHAPES = ['saw', 'square'];
 export const PD_SHAPES = ['saw', 'square', 'pulse', 'dbl sine', 'reso saw', 'reso tri'];
 export const REG_OPS = ['tri', 'count', 'rotate', 'xor', 'lfsr'];
 export const ARP_MODES = ['off', 'up', 'down', 'up/dn', 'random', 'played'];
@@ -39,7 +40,7 @@ export const DITHERS = ['none', 'tpdf', 'shaped'];
 const P = (id: string, name: string, group: string, min: number, max: number, def: number, scale: Scale = 'lin', unit?: string, labels?: string[]): ParamDef =>
   ({ id, name, group, min, max, def, scale, unit, labels });
 
-/** The six channels, in order. Each is mono-timbral like a chip channel. */
+/** The seven channels, in order. Each is mono-timbral like a chip channel. */
 export const CHANNELS = [
   { pre: 'p1', name: 'pulse 1' },
   { pre: 'p2', name: 'pulse 2' },
@@ -47,6 +48,7 @@ export const CHANNELS = [
   { pre: 'nz', name: 'noise' },
   { pre: 'fm', name: 'fm' },
   { pre: 'pd', name: 'pd' },
+  { pre: 'sw', name: 'saw' },
 ] as const;
 export type ChannelPrefix = typeof CHANNELS[number]['pre'];
 
@@ -183,6 +185,21 @@ export const PARAMS: ParamDef[] = [
   P('rvGate', 'gate', 'reverb', 0, 1, 0),
   // ---- output
   P('volume', 'volume', 'out', 0, 1, 0.7),
+  // ---- the saw channel: band-limited, unison. Appended last so the indices
+  // of every parameter before it (saved by hosts) stay where they were.
+  ...channel('sw', 0),
+  P('swShape', 'shape', 'sw', 0, 1, 0, 'enum', undefined, SAW_SHAPES),
+  P('swVoices', 'voices', 'sw', 1, 7, 5, 'int'),
+  P('swDetune', 'detune', 'sw', 0, 60, 18, 'lin', 'ct'),
+  P('swSpread', 'spread', 'sw', 0, 1, 0.7),
+  // ---- chorus, pump and width (all off at their defaults)
+  P('chMix', 'mix', 'chorus', 0, 1, 0),
+  P('chRate', 'rate', 'chorus', 0.05, 4, 0.7, 'log', 'Hz'),
+  P('chDepth', 'depth', 'chorus', 0, 1, 0.5),
+  P('pumpAmt', 'depth', 'pump', 0, 1, 0),
+  P('pumpDiv', 'every', 'pump', 1, 48, 24, 'int', 'frames'),
+  P('pumpRel', 'release', 'pump', 0.03, 1.5, 0.3, 'log', 's'),
+  P('width', 'width', 'out', 0, 2, 1),
 ];
 
 export type ParamId = string;
@@ -2144,5 +2161,261 @@ export const PRESETS: Preset[] = [
   {
     name: 'Init', tag: 'init',
     values: {},
+  },
+  // ---- neon: the band-limited unison saw channel, with chorus, width and the frame-clocked pump
+  {
+    name: 'Neon Pad', tag: 'neon',
+    values: {
+      mode: 1, cycle: 0, vel: 0.3,
+      p1Level: 0,
+      swLevel: 0.6, swShape: 0, swVoices: 7, swDetune: 22, swSpread: 0.9, swAtk: 0.7, swDec: 1, swSus: 0.8, swRel: 1.8,
+      fMode: 1, cutoff: 2600, res: 0.15,
+      chMix: 0.4, chRate: 0.5, chDepth: 0.6, width: 1.25,
+      echoFrames: 12, echoFb: 5, echoMix: 0.2, echoPing: 1,
+      rvMix: 0.4, rvSize: 0.9, rvDecay: 3.5, rvTone: 0.6, volume: 0.6,
+    },
+  },
+  {
+    name: 'Neon Lead', tag: 'neon',
+    values: {
+      mode: 1, cycle: 0, vel: 0.6,
+      p1Level: 0,
+      swLevel: 0.65, swShape: 0, swVoices: 5, swDetune: 12, swSpread: 0.6, swAtk: 0.004, swDec: 0.4, swSus: 0.75, swRel: 0.35,
+      glide: 2,
+      fMode: 1, cutoff: 5200, res: 0.3,
+      chMix: 0.25, chRate: 0.9, chDepth: 0.35,
+      echoFrames: 9, echoFb: 6, echoMix: 0.28, echoPing: 1,
+      rvMix: 0.22, rvSize: 0.7, rvDecay: 2, rvTone: 0.65, volume: 0.6,
+    },
+  },
+  {
+    name: 'Neon Bass', tag: 'neon',
+    values: {
+      mode: 1, cycle: 0, vel: 0.5,
+      p1Level: 0,
+      swLevel: 0.7, swShape: 1, swOct: -1, swVoices: 3, swDetune: 8, swSpread: 0.25, swAtk: 0.002, swDec: 0.3, swSus: 0.55, swRel: 0.12,
+      fMode: 1, cutoff: 900, res: 0.4,
+      rvMix: 0.06, rvDecay: 1, volume: 0.6,
+    },
+  },
+  {
+    name: 'Sidechain Pad', tag: 'neon',
+    values: {
+      // hold a chord: the frame clock ducks the pad every beat and it swells back
+      mode: 1, cycle: 0, vel: 0.3, frameSync: 1, tempo: 110,
+      p1Level: 0,
+      swLevel: 0.6, swShape: 0, swVoices: 7, swDetune: 26, swSpread: 1, swAtk: 0.3, swDec: 1, swSus: 1, swRel: 1,
+      fMode: 1, cutoff: 3200, res: 0.2,
+      pumpAmt: 0.75, pumpDiv: 24, pumpRel: 0.3,
+      chMix: 0.35, chRate: 0.4, chDepth: 0.6, width: 1.3,
+      rvMix: 0.35, rvSize: 0.85, rvDecay: 3, rvTone: 0.6, volume: 0.6,
+    },
+  },
+  {
+    name: 'Offbeat Pump', tag: 'neon',
+    values: {
+      // eighth-note ducking: the pad only really speaks between the hits
+      mode: 1, cycle: 0, vel: 0.3, frameSync: 1, tempo: 124,
+      p1Level: 0,
+      swLevel: 0.6, swShape: 1, swVoices: 5, swDetune: 14, swSpread: 0.8, swAtk: 0.05, swDec: 1, swSus: 1, swRel: 0.6,
+      fMode: 1, cutoff: 2200, res: 0.35,
+      pumpAmt: 0.9, pumpDiv: 12, pumpRel: 0.22,
+      chMix: 0.25, width: 1.2,
+      echoFrames: 18, echoFb: 6, echoMix: 0.25, echoPing: 1,
+      rvMix: 0.25, rvDecay: 2, volume: 0.6,
+    },
+  },
+  {
+    name: 'Midnight Drive', tag: 'neon',
+    values: {
+      // one key: a dotted echo and a wide chorus do the rest
+      mode: 1, cycle: 0, vel: 0.5, frameSync: 1, tempo: 100,
+      p1Level: 0,
+      swLevel: 0.6, swShape: 0, swVoices: 4, swDetune: 10, swSpread: 0.7, swAtk: 0.002, swDec: 0.25, swSus: 0.15, swRel: 0.25,
+      arpMode: 1, arpDiv: 6, arpOct: 2, arpGate: 0.5,
+      fMode: 1, cutoff: 4200, res: 0.3,
+      chMix: 0.3, chRate: 0.6, chDepth: 0.4, width: 1.3,
+      echoFrames: 18, echoFb: 8, echoMix: 0.38, echoPing: 1,
+      rvMix: 0.3, rvSize: 0.8, rvDecay: 2.6, rvTone: 0.7, volume: 0.6,
+    },
+  },
+  {
+    name: 'Grid Runner', tag: 'neon',
+    values: {
+      mode: 1, cycle: 0, vel: 0.5, frameSync: 1, tempo: 128,
+      p1Level: 0,
+      swLevel: 0.7, swShape: 0, swOct: -1, swVoices: 3, swDetune: 9, swSpread: 0.3, swAtk: 0.002, swDec: 0.2, swSus: 0.3, swRel: 0.1,
+      arpMode: 3, arpDiv: 3, arpOct: 2, arpGate: 0.55,
+      fMode: 1, cutoff: 1500, res: 0.45,
+      pumpAmt: 0.35, pumpDiv: 6, pumpRel: 0.12,
+      echoFrames: 9, echoFb: 5, echoMix: 0.2,
+      rvMix: 0.1, volume: 0.6,
+    },
+  },
+  {
+    name: 'Quiet Square', tag: 'neon',
+    values: {
+      // soft, small and warm: a square pair over a triangle, lots of room
+      mode: 1, cycle: 0, vel: 0.4,
+      p1Level: 0,
+      swLevel: 0.5, swShape: 1, swVoices: 2, swDetune: 6, swSpread: 0.4, swAtk: 0.01, swDec: 0.7, swSus: 0.3, swRel: 0.7,
+      wvLevel: 0.35, wvOct: -1, wvAtk: 0.02, wvDec: 0.6, wvSus: 0.5, wvRel: 0.6,
+      fMode: 1, cutoff: 2200, res: 0.1,
+      chMix: 0.2, chRate: 0.35, chDepth: 0.4,
+      echoFrames: 12, echoFb: 6, echoMix: 0.25, echoPing: 1,
+      rvMix: 0.45, rvSize: 0.9, rvDecay: 3.2, rvTone: 0.55, volume: 0.6,
+    },
+  },
+  {
+    name: 'Holo Bloom', tag: 'neon',
+    values: {
+      // FM bell with a sparkle of saws one octave up, spread wide
+      mode: 1, cycle: 0, vel: 0.5,
+      p1Level: 0,
+      fmLevel: 0.5, fmRatio: 3.5, fmIndex: 0.25, fmEnvAmt: 0.8, fmAtk: 0.002, fmDec: 1.2, fmSus: 0, fmRel: 1.5,
+      swLevel: 0.15, swOct: 1, swVoices: 3, swDetune: 14, swSpread: 1, swAtk: 0.005, swDec: 0.8, swSus: 0, swRel: 1.5,
+      chMix: 0.35, chRate: 0.5, chDepth: 0.5, width: 1.4,
+      echoFrames: 12, echoFb: 8, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.5, rvSize: 1, rvDecay: 5, rvTone: 0.7, volume: 0.58,
+    },
+  },
+  {
+    name: 'Wide Open', tag: 'neon',
+    values: {
+      // the big slow string-like wash: seven saws, a full spread, the widest image
+      mode: 1, cycle: 0, vel: 0.2,
+      p1Level: 0,
+      swLevel: 0.55, swShape: 0, swVoices: 7, swDetune: 30, swSpread: 1, swAtk: 0.9, swDec: 1, swSus: 1, swRel: 1.8,
+      fMode: 1, cutoff: 4800, res: 0.1,
+      chMix: 0.5, chRate: 0.3, chDepth: 0.8, width: 1.5,
+      rvMix: 0.35, rvSize: 1, rvDecay: 4.5, rvTone: 0.6, volume: 0.55,
+    },
+  },
+  {
+    name: 'Neon Stab', tag: 'neon',
+    values: {
+      mode: 1, cycle: 0, vel: 0.7, frameSync: 1, tempo: 120,
+      p1Level: 0,
+      swLevel: 0.65, swShape: 1, swVoices: 5, swDetune: 15, swSpread: 0.9, swAtk: 0.002, swDec: 0.22, swSus: 0, swRel: 0.15,
+      fMode: 1, cutoff: 3600, res: 0.35,
+      pumpAmt: 0.5, pumpDiv: 12, pumpRel: 0.2,
+      chMix: 0.3, chDepth: 0.4, width: 1.25,
+      echoFrames: 18, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.2, rvDecay: 1.8, volume: 0.6,
+    },
+  },
+  {
+    name: 'Tunnel Vision', tag: 'neon',
+    values: {
+      // a gliding square lead with a resonant filter: play legato
+      mode: 1, cycle: 0, vel: 0.5, glide: 3,
+      p1Level: 0,
+      swLevel: 0.6, swShape: 1, swVoices: 4, swDetune: 11, swSpread: 0.5, swAtk: 0.01, swDec: 0.5, swSus: 0.8, swRel: 0.3,
+      fMode: 1, cutoff: 3000, res: 0.55,
+      chMix: 0.3, chRate: 0.8, chDepth: 0.5, width: 1.2,
+      echoFrames: 9, echoFb: 7, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.25, rvDecay: 2.2, volume: 0.58,
+    },
+  },
+  // ---- dark, sparse and degraded: the Citizen Sleeper side (tagged by what each one is)
+  {
+    name: 'Dial Tone', tag: 'pluck',
+    values: {
+      // one soft sine ping, a long dotted echo, a little codec: play sparse single notes
+      p1Level: 0, frameSync: 1, tempo: 90,
+      wvLevel: 0.6, wvOct: 1, wvAtk: 0.002, wvDec: 0.25, wvSus: 0, wvRel: 0.3, ...tab('wv', SINE32),
+      lkCodec: 0.3, lkKbps: 24, lkBits: 10, lkDither: 1,
+      echoFrames: 18, echoFb: 9, echoMix: 0.4, echoPing: 1,
+      rvMix: 0.35, rvSize: 1, rvDecay: 4, rvTone: 0.5, volume: 0.6,
+    },
+  },
+  {
+    name: 'Shipwatching', tag: 'pad',
+    values: {
+      // slow and slightly wrong: detuned saws against an organ wave a third of a semitone apart
+      mode: 1, cycle: 0, vel: 0.3,
+      p1Level: 0,
+      swLevel: 0.45, swShape: 0, swVoices: 3, swDetune: 38, swSpread: 0.8, swAtk: 1.2, swDec: 1, swSus: 1, swRel: 2.5,
+      wvLevel: 0.3, wvFine: 35, wvAtk: 1.5, wvSus: 1, wvRel: 2.5, ...tab('wv', ORGAN32),
+      fMode: 1, cutoff: 900, res: 0.25,
+      lkBits: 10, lkDither: 1, lkDrift: 0.35, lkJitter: 0.2,
+      chMix: 0.25, chRate: 0.15, chDepth: 0.7,
+      rvMix: 0.5, rvSize: 1, rvDecay: 6, rvTone: 0.35, volume: 0.6,
+    },
+  },
+  {
+    name: 'Density', tag: 'drum',
+    values: {
+      // a low industrial hit that blooms into a cave and rings out (raise the plate gate for the 80s cut)
+      p1Level: 0, frameHz: 120,
+      nzLevel: 0.8, nzOct: 0, nzMode: 1, nzEnv: 1, nzRel: 0.06,
+      ...tab('tvA', [15, 12, 9, 7, 5, 4, 3, 2, 2, 1, 1, 0, 0, 0, 0, 0]),
+      wvLevel: 0.9, wvOct: -2, wvAtk: 0.001, wvDec: 0.35, wvSus: 0, wvRel: 0.2, wvPTab: 1,
+      ...tab('tp', [24, 14, 8, 5, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]), tpLoop: 16,
+      fMode: 1, cutoff: 1800, res: 0.3,
+      lkBits: 8, lkSpeaker: 0.35,
+      rvMix: 0.55, rvSize: 1, rvDecay: 4.5, rvTone: 0.3, volume: 0.6,
+    },
+  },
+  {
+    name: 'Cold Boot', tag: 'pad',
+    values: {
+      // a low saw drone pushed through a failing codec; the gaps are smeared over
+      mode: 1, cycle: 0, vel: 0.3,
+      p1Level: 0,
+      swLevel: 0.6, swShape: 0, swOct: -1, swVoices: 5, swDetune: 20, swSpread: 0.8, swAtk: 1.5, swDec: 1, swSus: 1, swRel: 3,
+      fMode: 1, cutoff: 700, res: 0.3,
+      lkCodec: 1, lkKbps: 12, lkLoss: 0.12, lkFrame: 12, lkConceal: 2, lkBits: 12, lkDither: 1,
+      rvMix: 0.4, rvSize: 1, rvDecay: 5, rvTone: 0.3, volume: 0.6,
+    },
+  },
+  {
+    name: 'Static Sleep', tag: 'fx',
+    values: {
+      // hiss and a thin high tone that swell, drop out and come back; hold a key and wait
+      p1Level: 0,
+      nzLevel: 0.15, nzOct: 4, nzMode: 1, nzAtk: 2, nzSus: 1, nzRel: 4,
+      wvLevel: 0.2, wvOct: 2, wvFine: 14, wvAtk: 2, wvSus: 1, wvRel: 4, ...tab('wv', SINE32),
+      fMode: 1, cutoff: 2400,
+      lkLoss: 0.35, lkFrame: 14, lkConceal: 3, lkBer: 0.05, lkBits: 11,
+      echoFrames: 30, echoFb: 11, echoMix: 0.3, echoPing: 1,
+      rvMix: 0.7, rvSize: 1, rvDecay: 9, rvTone: 0.4, volume: 0.55,
+    },
+  },
+  {
+    name: 'Relay', tag: 'link',
+    values: {
+      // a chip chord that keeps breaking up: repeated packets, jitter, a few bit errors
+      p1Duty: 1, p1Level: 0.5, p1Atk: 0.005, p1Dec: 0.4, p1Sus: 0.5,
+      wvLevel: 0.5, wvOct: -1, wvAtk: 0.005, wvDec: 0.4, wvSus: 0.6,
+      chord: 3, chordSpeed: 2, frameHz: 60,
+      lkLoss: 0.3, lkFrame: 6, lkConceal: 1, lkJitter: 0.4, lkBits: 9, lkBer: 0.12,
+      rvMix: 0.3, rvGate: 0.3, rvSize: 0.8, rvDecay: 2,
+    },
+  },
+  {
+    name: 'Hull Hum', tag: 'bass',
+    values: {
+      // a very low saw that the frame clock slowly ducks, like machinery breathing
+      mode: 1, cycle: 0, vel: 0.3, frameSync: 1, tempo: 60,
+      p1Level: 0,
+      swLevel: 0.7, swShape: 0, swOct: -2, swVoices: 3, swDetune: 12, swSpread: 0.3, swAtk: 2, swDec: 1, swSus: 1, swRel: 3,
+      fMode: 1, cutoff: 380, res: 0.35,
+      pumpAmt: 0.45, pumpDiv: 48, pumpRel: 1.2,
+      rvMix: 0.25, rvSize: 0.8, rvDecay: 3, rvTone: 0.3, volume: 0.65,
+    },
+  },
+  {
+    name: 'Last Packet', tag: 'glass',
+    values: {
+      // an FM bell that arrives damaged: some of it is lost and smeared back in
+      mode: 1, cycle: 0, vel: 0.5,
+      p1Level: 0,
+      fmLevel: 0.6, fmRatio: 3.5, fmIndex: 0.2, fmEnvAmt: 0.8, fmAtk: 0.002, fmDec: 1.5, fmSus: 0, fmRel: 2,
+      wvLevel: 0.3, wvOct: 1, wvAtk: 0.002, wvDec: 0.8, wvSus: 0, wvRel: 1.5, ...tab('wv', SINE32),
+      lkCodec: 0.6, lkKbps: 20, lkLoss: 0.25, lkFrame: 10, lkConceal: 2,
+      echoFrames: 15, echoFb: 8, echoMix: 0.35, echoPing: 1,
+      rvMix: 0.5, rvSize: 1, rvDecay: 5, rvTone: 0.5, volume: 0.58,
+    },
   },
 ];

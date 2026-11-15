@@ -37,6 +37,9 @@ export class Rng {
   bi(): number { return this.next() * 2 - 1; }
 }
 
+/** Samples per control chunk: levels, pitches and filter coefficients update once per chunk. */
+export const CHUNK = 32;
+
 /** One-pole parameter smoother (exponential glide to target). */
 export class Smooth {
   value: number;

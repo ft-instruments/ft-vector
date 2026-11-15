@@ -57,9 +57,10 @@ for (const p of PARAMS) {
 }
 L.push('};');
 L.push('');
-L.push('/** Per channel (pulse 1, pulse 2, wave, noise, fm, pd), the index of each of its common parameters. */');
+L.push('/** Per channel (pulse 1, pulse 2, wave, noise, fm, pd, saw), the index of each of its common parameters. */');
+L.push(`constexpr int NUM_CHANNELS = ${CHANNELS.length};`);
 L.push('struct ChannelIds { int level, oct, semi, fine, pan, env, atk, dec, sus, rel, ptab; };');
-L.push('inline constexpr ChannelIds CHANNEL_IDS[6] = {');
+L.push('inline constexpr ChannelIds CHANNEL_IDS[NUM_CHANNELS] = {');
 for (const c of CHANNELS) L.push(`  { ${CHANNEL_KEYS.map((k) => `P::${c.pre}${k}`).join(', ')} },`);
 L.push('};');
 L.push('');
