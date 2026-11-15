@@ -1,5 +1,5 @@
-// Plate reverb: the same 8-line Householder FDN skeleton as Mycelia's hall,
-// re-tuned as a digital plate — short, dense, bright, slightly metallic
+// Plate reverb: an 8-line Householder FDN
+// tuned as a digital plate — short, dense, bright, slightly metallic
 // (light modulation only), with an optional gate that cuts the tail after
 // a hold time, the drum-machine way.
 

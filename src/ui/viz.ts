@@ -3,7 +3,7 @@
 // wavetable, the LFSR, 2-op FM, Casio phase distortion, the Chamberlin SVF,
 // the 4-bit frame echo, the gated plate, the link's failures). Redrawn when
 // a value changes, never per audio block. The drawing helper and the Viz
-// canvas are the family's (same as Mycelia's); the pictures are Vector's.
+// canvas are shared; the pictures are Vector's.
 
 import { type ParamValues, CHORD_SEMIS, CLOCK_HZ, DUTY_VALUES, CLOCKS } from '../dsp/params.ts';
 

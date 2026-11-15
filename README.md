@@ -1,12 +1,12 @@
 # ft-vector
 
-**VECTOR** — a clean-digital synth with its own physics. Where `ft-mycelia`
-models circuits and hides that it is digital, Vector models **digital
+**VECTOR** — a clean-digital synth with its own physics. Instead of
+modelling circuits and hiding that it is digital, Vector models **digital
 systems themselves**: clock dividers, 8-bit registers ticked at a frame
 clock, quantisers, and a transmission link that loses data. Chip squares,
-glassy FM and phase-distortion, codec smear, packet stutter. Runs in the
-browser; the DSP core lifts straight into a VST3/AU plugin (same shape as
-`ft-mycelia` and `ft-piano`).
+glassy FM and phase-distortion, a band-limited unison saw, codec smear,
+packet stutter. 170 factory presets. It runs in the browser, and the same DSP
+core is built as a VST3 / AU plugin and a standalone app.
 
 ```
 npm install
@@ -27,7 +27,7 @@ JSON on the clipboard (paste it into `PRESETS` in `params.ts` to keep it).
 
 Builds of the VST3, the AU (macOS only) and the standalone app for macOS,
 Windows and Linux are attached to each
-[release](https://github.com/filipefthomaz-gd/ft-vector/releases).
+[release](https://github.com/ft-instruments/ft-vector/releases).
 
 | | Standalone | VST3 | AU |
 |---|---|---|---|
@@ -63,8 +63,9 @@ wave    ─┤  (chip mode: one voice, held keys cycle at frame rate;
 noise   ─┤   modern mode: 8 voices, the cycle becomes an accent)
 fm      ─┤
 pd      ─┘
-   → echo (frames) → SVF → LINK: drift · jitter → codec → packet loss → word length · bit errors
-   → plate → speaker → out
+saw ───────  a seventh, band-limited channel at the host rate (1–7 unison voices)
+   → chorus → echo (frames) → SVF → LINK: drift · jitter → codec → packet loss → word length · bit errors
+   → plate → pump → width → speaker → out
 ```
 
 Everything lives in [`src/dsp/`](src/dsp/) and has no browser dependencies.
@@ -86,6 +87,7 @@ middle, −18 cents at C8 (`render tuning`); **precision** blends to exact.
 | noise | 15-bit LFSR, short (93-step, metallic, pitched) or long mode, clocked at 93× the note |
 | fm | 2-operator FM with feedback; index follows the envelope by an amount |
 | pd | Casio-style phase distortion: saw, square, pulse, double sine, resonant saw / tri; amount follows the envelope |
+| saw | the one channel that is not a chip: a PolyBLEP band-limited saw or square, 1–7 unison voices with detune and stereo spread, run at the host rate outside the clock and divider. Off by default |
 
 ### 2. Register modulation — `registers.ts`
 
@@ -143,7 +145,9 @@ real failure mode with a physical parameter; all at zero → transparent.
 | file | what |
 |---|---|
 | `svf.ts` | Chamberlin state-variable filter (lp / bp / hp), run twice per sample. Global, modulated by the registers. |
-| `reverb.ts` | **Plate**: Mycelia's 8-line FDN skeleton re-tuned — short bright lines, light modulation, and a **gate** that holds the tail for 20–400 ms after the input stops, then cuts. |
+| `reverb.ts` | **Plate**: an 8-line FDN with short bright lines, light modulation, and a **gate** that holds the tail for 20–400 ms after the input stops, then cuts. |
+| `chorus.ts` | Ensemble chorus: three slowly modulated delay taps per side, left and right offset in phase. Mix, rate, depth. A stereo **width** control (0–200 %) sits after the plate. |
+| `pump.ts` | A sidechain-style duck whose "kick" is the frame clock: every N frames the level snaps down and recovers, so a held pad breathes with the machine. |
 | `voice.ts` | One voice = the seven channels playing one note. Levels, pitches and duties are computed once per 32-sample chunk and ramped; envelopes step per chunk. |
 | `arp.ts` | The frame-counted note arp (up / down / up-down / random / as played, 1–4 octaves, gate, hold). |
 | `echo.ts` | The frame echo. |
@@ -158,7 +162,7 @@ Chrome, starts the worklet, plays a chord and checks the output level.
 
 ## Presets
 
-150, grouped in a searchable browser (click the preset name or press `` ` ``, `Esc` closes); `< >` step through them in browser order, **mutate** nudges.
+170, grouped in a searchable browser (click the preset name or press `` ` ``, `Esc` closes); `< >` step through them in browser order, **mutate** nudges.
 
 | category | presets |
 |---|---|
@@ -174,7 +178,11 @@ Chrome, starts the worklet, plays a chord and checks the output level.
 | sequences | Rule 110 · Rule 30 Bass · Trance Gate · XOR Sequence · Automaton Bells · Data Runner · Stardust (maj7 chord arp) · Table Melody · Berlin Table · Gate Choir · Euclid Glass · Rule 90 Garden · Phaser Sequence · XOR Bell Sequence · Acid Table |
 | plucks | Neon Pluck · Glass Pluck · Harp Stack · Data Koto · Pizz Array · Supersquare Pluck |
 | leads | Laser Violin · Vector Saw · Glass Flute · Resonant Laser · Portamento Square · Choir Lead |
-| fx | Riser Array · Falling Satellite · Laser Zap · Sonar Ping · Modem Dream · Power Down |
+| fx | Riser Array · Falling Satellite · Laser Zap · Sonar Ping · Modem Dream · Power Down · Static Sleep |
+| neon | Neon Pad · Neon Lead · Neon Bass · Neon Stab · Sidechain Pad · Offbeat Pump · Midnight Drive · Grid Runner · Quiet Square · Holo Bloom · Wide Open · Tunnel Vision — built on the saw channel, chorus, width and pump |
+
+Seven more dark, sparse presets sit in the existing categories (Dial Tone,
+Shipwatching, Density, Cold Boot, Relay, Hull Hum, Last Packet).
 
 In the first bank, the 17 newest (the first three bass, and the last one or few of the others) are
 stacks: three or four channels layered in
@@ -199,8 +207,7 @@ bank's median loudness, drums a little below.
 
 ## UI
 
-The FT Instrument look (`src/ft.css`, shared with Mycelia) in Vector's
-skin (`src/style.css`): hard black-glass modules cut at two corners, titles
+The FT Instrument look (`src/ft.css`) in Vector's skin (`src/style.css`): hard black-glass modules cut at two corners, titles
 split into cyan and magenta, a glitching logo, and the neon city grid
 scrolling underneath. Each module has its own neon (cyan for the chip,
 magenta for the glass sources, violet for the registers, acid for
@@ -209,7 +216,9 @@ sequencing, orange for the tables, red for the link), exposed as
 
 Four views (`1`–`4`): **voice** (machine, chord, the seven channels; channels
 that are off fold to one line), **motion** (frame clock, arp, filter,
-registers, automaton), **tables**, **link** (transmission, echo, plate).
+registers, automaton), **tables**, **link** (transmission, echo, plate,
+chorus and width, pump). The channels are full-width strips, and a channel
+that is folded takes one line.
 Most modules carry a picture of what they do, drawn with the chip's own
 maths (`src/ui/viz.ts`): duty cycles, the drawn wavetable, the LFSR, 2-op FM,
 phase distortion, the SVF response, the stepped frame echo, the gated plate,
@@ -223,9 +232,8 @@ the current sound and keeps it in this browser under *yours* (delete with
 
 ## The plugin (VST3 / AU)
 
-`plugin/` builds VECTOR as a **VST3** (macOS and Linux), an **AU** (macOS,
-for Logic) and a standalone app, with JUCE 8 (fetched by CMake), the same
-way `ft-mycelia` does.
+`plugin/` builds VECTOR as a **VST3** (macOS, Windows and Linux), an **AU**
+(macOS, for Logic) and a standalone app, with JUCE 8 (fetched by CMake).
 
 ```
 plugin/build.sh      # web UI + params header + plugins, installed for this user
@@ -233,8 +241,8 @@ plugin/build.sh      # web UI + params header + plugins, installed for this user
 
 It installs to `~/Library/Audio/Plug-Ins/{VST3,Components}` on macOS and
 `~/.vst3` on Linux. On macOS check the AU with `auval -v aumu Vect Ftft`.
-On Linux it needs the usual JUCE packages plus WebKitGTK (see Mycelia's
-README for the list).
+On Linux it needs the usual JUCE packages plus WebKitGTK; the exact apt list
+is in [`.github/workflows/build.yml`](.github/workflows/build.yml).
 
 - **DSP**: `plugin/Source/dsp/` is a line-for-line C++ port of `src/dsp/`
   (`Chip.h`, `Machine.h` for the registers, tables and arp, `Voice.h`,
@@ -242,14 +250,14 @@ README for the list).
   `Engine.h`). Buffers the TS keeps in `Float32Array`s are `float`,
   everything else is `double`, and `Math.round` is JS's (halves towards +∞),
   so the two engines agree: `node scripts/null-test.ts` renders every preset
-  with both and subtracts — all 150 are bit-identical. The codec keeps its
+  with both and subtracts — every preset is bit-identical. The codec keeps its
   naive MDCT for that reason (an FFT would round differently); in C++ it is
   cheap anyway. Nothing allocates on the audio thread. About twice as fast
   as V8 (`out/vector-render bench`: 5 % of a core for eight voices of
   Sleeper Pad with the codec on).
 - **Parameters**: `Params.gen.h` is generated from `params.ts`
   (`node scripts/gen-plugin.ts`, run by `build.sh`), so the host sees the same
-  228 parameters with the same knob curves and value text — every cell of the
+  250 parameters with the same knob curves and value text — every cell of the
   drawn tables included, so a table can be automated. The factory bank is the
   host's program list.
 - **UI**: the web UI itself (`dist/`, embedded in the binary) in a WebView;
@@ -278,9 +286,11 @@ for eight voices of the heaviest preset with the codec on, at 48 kHz in V8.
 - The codec keeps coefficients by magnitude with one quantiser step per block — no psychoacoustic model, on purpose.
 - The link runs at the host rate; a real transmission would be resampled to the codec's rate first.
 - Tables share one position per voice (both volume tables step together).
-- Presets can be copied as JSON but not saved in the browser yet.
+- The saw channel runs at the host rate, so it has none of the chip aliasing or divider detuning the other six channels are built around.
 
 ## License
+
+Copyright (C) 2026 Filipe F. Thomaz.
 
 VECTOR is free software under the [GNU AGPL v3](LICENSE). The plugin is built
 on [JUCE](https://juce.com), which is itself AGPLv3 (or commercial), so the
