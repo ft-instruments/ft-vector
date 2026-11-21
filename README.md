@@ -264,8 +264,10 @@ is in [`.github/workflows/build.yml`](.github/workflows/build.yml).
   `src/plugin.ts` stands in for the AudioWorklet and talks to
   `PluginEditor.cpp` over JUCE's event bridge, including the live machine
   display (registers, automaton, table playheads, packet loss). The page is
-  laid out at 1360 × 1000 and scaled to the window; the voice view with
-  several channels open is taller and scrolls. Your saved presets are a file
+  laid out at 1360 × 850 (16:10) and scaled to fit the window, with no
+  scrolling. In the plugin the voice view is split over three tabs (voice,
+  chip and glass), six tabs in all, and a new window opens as large as fits
+  the screen, up to that size. Your saved presets are a file
   shared by every instance (`~/Library/Application Support/FT/Vector/` or
   `~/.config/FT/Vector/`). `node scripts/check-plugin-ui.ts` checks the page
   against a fake bridge.
