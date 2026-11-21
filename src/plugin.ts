@@ -21,7 +21,7 @@ const backend = (): JuceBackend | undefined =>
  * editor's default size keeps this aspect (PluginEditor.cpp). The voice view
  * with several channels open is taller and scrolls, as it does in a browser.
  */
-export const UI_W = 1360, UI_H = 1000;
+export const UI_W = 1360, UI_H = 850;
 
 /** Scale the laid-out page to the window, centred when the window is wider than the design. */
 function fitToWindow(): void {
@@ -39,6 +39,14 @@ function trackHeight(): void {
   const set = () => document.documentElement.style.setProperty('--ui-h', `${app.offsetHeight}px`);
   new ResizeObserver(set).observe(app);
   set();
+}
+
+/** Dev only (`npm run dev`, then open /?plugin): lay the page out as the plugin does, in a browser tab. Audio stays the browser's. */
+export function previewPluginLayout(): void {
+  document.documentElement.classList.add('in-plugin', 'preview');
+  fitToWindow();
+  trackHeight();
+  window.addEventListener('resize', fitToWindow);
 }
 
 /** True when the page is the plugin's editor. */

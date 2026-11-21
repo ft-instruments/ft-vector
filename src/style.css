@@ -112,6 +112,8 @@
 .panel.link   { --accent: var(--red);     --accent-rgb: var(--red-rgb); }
 .panel.out    { --accent: var(--cyan);    --accent-rgb: var(--cyan-rgb); }
 .tabs[data-on="voice"]  { --tabc: var(--cyan); }
+.tabs[data-on="chip"]   { --tabc: var(--acid); }
+.tabs[data-on="glass"]  { --tabc: var(--magenta); }
 .tabs[data-on="motion"] { --tabc: var(--violet); }
 .tabs[data-on="tables"] { --tabc: var(--orange); }
 .tabs[data-on="link"]   { --tabc: var(--red); }
@@ -169,7 +171,7 @@
 }
 
 /* inside the plugin the host owns the audio device and the MIDI inputs */
-.in-plugin .power-wrap, .in-plugin .midi { display: none; }
+.in-plugin:not(.preview) .power-wrap, .in-plugin:not(.preview) .midi { display: none; }
 
 /* and the page is laid out at one size and scaled to the window (src/plugin.ts
    sets --ui-scale and --ui-x), so a smaller window shows all of it, smaller,
@@ -242,3 +244,87 @@ footer .hint { color: var(--dim); }
 .panel.chan .picker, .panel.glass .picker { width: 132px; }
 
 .panel.seq .picker { width: 104px; }
+
+/* ---------- plugin pages (VECTOR): the voice view is split over three pages of strips (main.ts); a strip
+   fills its share of the page, the picture on the left growing with it */
+.in-plugin .panel.chan, .in-plugin .panel.glass, .in-plugin .panel.strip { grid-template-rows: auto minmax(0, 1fr); align-content: stretch; }
+.in-plugin .panel.chan > .viz, .in-plugin .panel.glass > .viz { min-height: 100px; }
+.in-plugin .panel.chan > .body, .in-plugin .panel.glass > .body, .in-plugin .panel.strip > .body { align-self: center; }
+/* the tables: two by two, each grid as wide as half the page and as tall as its share, its knobs under it */
+.in-plugin .panel.tables { grid-column: span 6 !important; }
+.in-plugin .panel.tables > .body { flex: 1 1 auto; display: grid; grid-template-columns: max-content max-content minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 2px; }
+.in-plugin .panel.tables .grid { grid-column: 1 / -1; align-self: stretch; width: auto; margin: 0; }
+.in-plugin .panel.tables .grid canvas { flex: 1 1 0; height: 0; min-height: 90px; }
+
+/* ---------- plugin layout (shared across the ft-* plugins)
+   Inside the plugin the page is laid out at 1360x850 (16:10) and scaled as a whole to the window (src/plugin.ts),
+   so a smaller window shows all of it, smaller, and nothing ever scrolls. This block is the same text in every
+   ft-* instrument; each plugin's own pages come before it. All of it is scoped to .in-plugin: the browser tab's
+   layout is untouched. */
+
+/* the frame: header, tabs, the page filling what is left, the keyboard pinned to the bottom */
+.in-plugin body { overflow: hidden; }
+.in-plugin #app { min-height: 850px; padding-top: 8px; padding-bottom: 8px; display: flex; flex-direction: column; }
+.in-plugin .bar { margin-bottom: 10px; padding-top: 8px; padding-bottom: 8px; }
+.in-plugin .tabs { margin-bottom: 10px; }
+.in-plugin #panels { flex: 1 1 auto; gap: 8px; align-content: stretch; }
+.in-plugin footer { margin-top: 10px; padding-top: 0; }
+.in-plugin #keyboard { height: 72px; }
+.in-plugin footer .hint { display: none; }   /* the keys are in the tooltips */
+
+/* the header: brand · prev / presets / next and the three actions · the scope · volume (and MIDI in the dev
+   preview) · the readout over the host tempo and the stop button · the power button (dev preview only).
+   Every part has a fixed size, so a long preset name or a digit coming and going moves nothing */
+.in-plugin .bar { grid-template-columns: auto auto minmax(96px, 1fr) auto; gap: 16px; }
+.in-plugin .presets > *, .in-plugin .actions .chip { flex: none; }
+.in-plugin #browse { width: 190px; min-width: 0; max-width: none; }
+.in-plugin #midi-port { max-width: 112px; }
+.in-plugin .scopewrap { max-width: 240px; height: 48px; }
+.in-plugin .status { gap: 10px; }
+.in-plugin .status .io:has(#stats) { display: grid; grid-template-columns: auto auto; justify-items: end; align-items: center; gap: 6px 10px; }
+.in-plugin #stats { grid-column: 1 / -1; width: calc(20ch + 20 * 0.06em); min-width: 0; text-align: right; }
+.in-plugin #tempo {
+  width: calc(7ch + 7 * 0.06em); text-align: right; white-space: nowrap;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; font-variant-numeric: tabular-nums;
+}
+.in-plugin .power-wrap { min-width: 0; width: 92px; flex: none; }
+.in-plugin #start-label { max-width: 92px; overflow: hidden; text-overflow: ellipsis; }
+
+/* the tab bar: number and name on the left, a short hint on the right that always fits whole */
+.in-plugin .tab small { flex: none; overflow: visible; text-overflow: clip; }
+
+/* modules: one padding and header rhythm, and the picture takes whatever height the page leaves */
+.in-plugin .panel { padding: 10px 14px 8px; }
+.in-plugin .panel .head { margin-bottom: 8px; padding-bottom: 6px; }
+.in-plugin :where(.panel) { display: flex; flex-direction: column; }
+.in-plugin :where(.panel) > .viz { flex: 1 1 auto; }
+.in-plugin :where(.panel) > .body { flex: none; }
+
+/* nothing folds in the plugin: every page fits whole, so no fold marker and no pointer */
+.in-plugin .panel .head.fold { cursor: default; }
+.in-plugin .panel .head.fold::after { display: none; }
+
+/* knob readouts never size their knob, so a value gaining a digit moves nothing */
+.in-plugin :where(.knob:not(.hero)) .readout { width: 0; min-width: 100%; overflow: visible; text-align: center; }
+
+/* on / off: a module that does nothing right now is dimmed by 40%, graph included, and its header carries a
+   dashed OFF tag; a chip that picks a module has a lit dot when the module plays and a hollow one when idle */
+.in-plugin .panel.off > .body, .in-plugin .panel.off > .viz, .in-plugin .panel.off > .grid { opacity: 0.6; filter: saturate(0.5); }
+.in-plugin .panel.off > .head h2 { opacity: 0.7; }
+.in-plugin .panel .head .state:empty { display: none; }
+.in-plugin .panel .head .state, .in-plugin .panel.off > .head .meta {
+  margin-left: auto; flex: none; padding: 2px 8px; line-height: 1;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--faint); background: transparent; border: 1px dashed var(--faint);
+}
+.in-plugin .pick {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; height: 30px; padding: 0 10px;
+  cursor: pointer; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+  color: var(--dim); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--line-strong); border-radius: 0;
+}
+.in-plugin .pick::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 7px var(--accent); }
+.in-plugin .pick:hover { color: var(--ink); }
+.in-plugin .pick.on { color: var(--ink); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.in-plugin .pick.off { color: var(--faint); border-style: dashed; }
+.in-plugin .pick.off::before { background: transparent; box-shadow: none; border: 1px solid var(--faint); }
+.in-plugin .pick.off.on { color: var(--dim); border-style: solid; border-color: var(--faint); background: rgba(255, 255, 255, 0.04); box-shadow: none; }

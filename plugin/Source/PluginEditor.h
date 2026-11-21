@@ -27,7 +27,7 @@ private:
   juce::WebBrowserComponent web;
   std::array<float, ftvector::NUM_PARAMS> shown {};   // the value the page last heard about
   std::unordered_map<std::string, int> ids;
-  static constexpr int UI_W = 1360, UI_H = 1000;   // matches src/plugin.ts
+  static constexpr int UI_W = 1360, UI_H = 850;   // matches src/plugin.ts
   bool ready = false;
   bool sized = false;   // resizes before this are ours, not the user's
   int seenState = -1;

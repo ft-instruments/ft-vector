@@ -13,7 +13,7 @@ import { join, extname } from 'node:path';
 
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PORT = 4175, DEBUG = 9335;
-const UI_W = 1360, UI_H = 1000;   // src/plugin.ts
+const UI_W = 1360, UI_H = 850;   // src/plugin.ts
 const MIME: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' };
 
 const server = createServer((req, res) => {
@@ -134,13 +134,13 @@ async function main(): Promise<void> {
       scope: Array.from({ length: 1024 }, (_, i) => Math.sin(i / 20) * 0.5),
       display: [0xa5, 0x0f, 0x10, 0x01, 3, 5, 2, 77, 1, 40, 3, 0, 0, 0, 0, 0] })`);
   await sleep(100);
-  check(String(await evaluate("document.querySelector('#stats').textContent")).includes('122 bpm'), 'the host tempo shows in the status line');
+  check(String(await evaluate("document.querySelector('#tempo')?.textContent")).includes('122 bpm'), 'the host tempo shows in the status line, beside the stop button');
   check(await evaluate("document.querySelector('.bitrow .val').textContent") === 'A5', 'the registers show the display bytes');
 
   // 8. drawing in a grid lands in the right cell when the page is scaled
   await send('Emulation.setDeviceMetricsOverride', { width: UI_W / 2, height: UI_H / 2, deviceScaleFactor: 1, mobile: false });
   await sleep(300);
-  await evaluate("document.querySelectorAll('#tabs .tab')[2].click()");
+  await evaluate("document.querySelectorAll('#tabs .tab')[4].click()");   // tables
   await sleep(400);
   const cell = await evaluate(`(() => {
     const c = document.querySelector('.grid canvas'); const r = c.getBoundingClientRect();
@@ -170,33 +170,30 @@ async function main(): Promise<void> {
   await evaluate("document.querySelector('#browser-close').click()");
   await sleep(300);
 
-  // 11. every view but voice fits the design size with every module open; voice folds its channels or scrolls
+  // 11. every view fits the design size with every module open
   mkdirSync('out', { recursive: true });
   const heights: string[] = [];
   let tallest = 0;
-  for (let t = 0; t < 4; t++) {
+  for (let t = 0; t < 6; t++) {
     await evaluate(`document.querySelectorAll('#tabs .tab')[${t}].click(); document.querySelectorAll('.panel.collapsed').forEach((p) => p.classList.remove('collapsed'))`);
     await sleep(700);
     const h = await evaluate("document.querySelector('#app').offsetHeight") as number;
-    heights.push(`${['voice', 'motion', 'tables', 'link'][t]} ${h}`);
-    if (t > 0) tallest = Math.max(tallest, h);
+    heights.push(`${['voice', 'chip', 'glass', 'motion', 'tables', 'link'][t]} ${h}`);
+    tallest = Math.max(tallest, h);
     const shot = await send('Page.captureScreenshot', { format: 'png' }) as { data: string };
     writeFileSync(`out/screenshot-plugin-${t + 1}.png`, Buffer.from(shot.data, 'base64'));
   }
-  check(tallest <= UI_H, `motion, tables and link fit ${UI_W}x${UI_H} at full size (${heights.join(', ')})`);
-  console.log('wrote out/screenshot-plugin-{1..4}.png');
+  check(tallest <= UI_H, `every view fits ${UI_W}x${UI_H} at full size (${heights.join(', ')})`);
+  console.log('wrote out/screenshot-plugin-{1..6}.png');
 
   // 12. a window smaller than the design shows the whole page, scaled
   await send('Emulation.setDeviceMetricsOverride', { width: 1050, height: 834, deviceScaleFactor: 1, mobile: false });
-  await evaluate("document.querySelectorAll('#tabs .tab')[3].click()");
-  await sleep(500);
-  const box = await evaluate("(() => { const r = document.querySelector('#app').getBoundingClientRect(); return [r.right, r.bottom, innerWidth, innerHeight]; })()") as number[];
-  check(box[0] <= box[2] + 0.5 && box[1] <= box[3] + 0.5, `at 1050x834 the link view fits (${Math.round(box[0])}x${Math.round(box[1])})`);
-  // the voice view with every channel open scrolls, down to the bottom of the scaled page and no further
-  await evaluate("document.querySelectorAll('#tabs .tab')[0].click(); document.querySelectorAll('.panel.collapsed').forEach((p) => p.classList.remove('collapsed'))");
-  await sleep(500);
-  const scroll = await evaluate("(() => { const r = document.querySelector('#app').getBoundingClientRect(); return [document.scrollingElement.scrollHeight, r.height, document.scrollingElement.scrollWidth, innerWidth]; })()") as number[];
-  check(Math.abs(scroll[0] - scroll[1]) <= 2 && scroll[2] <= scroll[3], `the open voice view scrolls exactly its scaled height (${Math.round(scroll[0])} vs ${Math.round(scroll[1])}), not sideways`);
+  for (let t = 0; t < 6; t++) {
+    await evaluate(`document.querySelectorAll('#tabs .tab')[${t}].click(); document.querySelectorAll('.panel.collapsed').forEach((p) => p.classList.remove('collapsed'))`);
+    await sleep(500);
+    const box = await evaluate("(() => { const r = document.querySelector('#app').getBoundingClientRect(); return [r.right, r.bottom, innerWidth, innerHeight]; })()") as number[];
+    check(box[0] <= box[2] + 0.5 && box[1] <= box[3] + 0.5, `at 1050x834 view ${t + 1} fits (${Math.round(box[0])}x${Math.round(box[1])})`);
+  }
   const small = await send('Page.captureScreenshot', { format: 'png' }) as { data: string };
   writeFileSync('out/screenshot-plugin-small.png', Buffer.from(small.data, 'base64'));
   console.log('wrote out/screenshot-plugin-small.png');

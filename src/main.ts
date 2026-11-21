@@ -1,5 +1,5 @@
 import { Synth } from './audio.ts';
-import { PluginSynth, inPlugin } from './plugin.ts';
+import { PluginSynth, inPlugin, previewPluginLayout } from './plugin.ts';
 import type { WorkletStats } from './worklet/processor.ts';
 import { MidiInput } from './midi.ts';
 import { KeyboardView, ComputerKeys, FIRST, LAST } from './keyboard.ts';
@@ -14,6 +14,10 @@ const $ = <T extends HTMLElement>(sel: string): T => document.querySelector(sel)
 const plugin = inPlugin() ? new PluginSynth() : null;
 const synth: Synth | PluginSynth = plugin ?? new Synth();
 document.documentElement.classList.toggle('in-plugin', !!plugin);
+// dev only: ?plugin shows the plugin's layout in a browser tab (real audio, resize the window to see it scale)
+if (import.meta.env.DEV && !plugin && new URLSearchParams(location.search).has('plugin')) previewPluginLayout();
+// in the plugin every page fits whole, so nothing folds: modules stay open whatever their level
+const NO_FOLD = document.documentElement.classList.contains('in-plugin');
 const values: ParamValues = defaults();
 const controls = new Map<string, Control>();
 
@@ -191,6 +195,14 @@ const LAYOUT: PanelSpec[] = [
   { tab: 'link', title: 'pump', sub: 'the frame clock ducks the mix', cls: 'seq strip', span: 6, viz: 'pump', groups: [{ hero: true, ids: ['pumpAmt', 'pumpRel'] }, { ids: ['pumpDiv'] }] },
 ];
 
+// In the plugin the page is laid out at 1360x850, so the voice view (the machine and seven channels) is split
+// over three pages that each hold two or three strips. In a browser tab the original four views stay.
+const IN_PLUGIN_LAYOUT = document.documentElement.classList.contains('in-plugin');
+if (IN_PLUGIN_LAYOUT) {
+  const to: Record<string, string> = { 'pulse 2': 'chip', wave: 'chip', noise: 'chip', fm: 'glass', pd: 'glass', saw: 'glass' };
+  for (const spec of LAYOUT) spec.tab = to[spec.title] ?? spec.tab;
+}
+
 const vizzes: Viz[] = [];
 const redrawViz = () => { for (const v of vizzes) v.redraw(); };
 
@@ -201,6 +213,7 @@ function onParam(id: string, v: number): void {
   const def = PARAM_BY_ID[id];
   if (def.tab) grids.get(def.tab)?.set(def.idx!, v);
   if (id.endsWith('Level')) refreshChannels();
+  refreshStates();
   if (id === 'volume') setMaster(v);
   refreshLoops();
   redrawViz();
@@ -212,7 +225,7 @@ function refreshChannels(expandOn = false): void {
     const off = lvl <= 0;
     meta.textContent = off ? 'off' : `lvl ${Math.round(lvl * 100)}`;
     panel.classList.toggle('off', off);
-    if (expandOn) panel.classList.toggle('collapsed', off);
+    if (expandOn && !NO_FOLD) panel.classList.toggle('collapsed', off);
   }
 }
 
@@ -222,6 +235,24 @@ function refreshLoops(): void {
 
 const panelsEl = $('#panels');
 const channelPanels = new Map<string, { panel: HTMLElement; meta: HTMLElement }>();
+const panelByTitle = new Map<string, HTMLElement>();
+// modules that do nothing right now: dimmed and labelled in the plugin (the channels already say 'off' by their level)
+const IDLE: Record<string, () => boolean> = {
+  chord: () => values.chord < 0.5, arp: () => values.arpMode < 0.5, echo: () => values.echoMix <= 0,
+  plate: () => values.rvMix <= 0, chorus: () => values.chMix <= 0, pump: () => values.pumpAmt <= 0,
+};
+function refreshStates(): void {
+  if (!NO_FOLD) return;   // the plugin only: a browser tab keeps its folding and level tags
+  for (const [title, idle] of Object.entries(IDLE)) {
+    const panel = panelByTitle.get(title);
+    if (!panel) continue;
+    const off = idle();
+    panel.classList.toggle('off', off);
+    let tag = panel.querySelector<HTMLElement>(':scope > .head > .state');
+    if (!tag) { tag = document.createElement('span'); tag.className = 'state'; panel.querySelector(':scope > .head')!.append(tag); }
+    tag.textContent = off ? 'off' : '';
+  }
+}
 for (const spec of LAYOUT) {
   const panel = document.createElement('section');
   panel.className = `panel ${spec.cls}`;
@@ -238,7 +269,7 @@ for (const spec of LAYOUT) {
     const meta = document.createElement('span'); meta.className = 'meta';
     head.append(meta);
     head.classList.add('fold');
-    head.addEventListener('click', () => panel.classList.toggle('collapsed'));
+    head.addEventListener('click', () => { if (!NO_FOLD) panel.classList.toggle('collapsed'); });
     channelPanels.set(spec.channel, { panel, meta });
   }
   panel.append(head);
@@ -281,11 +312,19 @@ for (const spec of LAYOUT) {
   }
   panel.append(body);
   panelsEl.append(panel);
+  panelByTitle.set(spec.title, panel);
 }
 
 // ---- views: four tabs so the whole machine isn't on screen at once ---------
 
-const TABS: { id: string; name: string; hint: string }[] = [
+const TABS: { id: string; name: string; hint: string }[] = IN_PLUGIN_LAYOUT ? [
+  { id: 'voice', name: 'voice', hint: 'sys · chord' },
+  { id: 'chip', name: 'chip', hint: 'p2 · wave · noise' },
+  { id: 'glass', name: 'glass', hint: 'fm · pd · saw' },
+  { id: 'motion', name: 'motion', hint: 'clk · arp' },
+  { id: 'tables', name: 'tables', hint: 'wave · env' },
+  { id: 'link', name: 'link', hint: 'echo · plate' },
+] : [
   { id: 'voice', name: 'voice', hint: 'machine · chord · channels' },
   { id: 'motion', name: 'motion', hint: 'clock · arp · filter · regs' },
   { id: 'tables', name: 'tables', hint: 'wavetable · envelopes · pitch' },
@@ -336,7 +375,7 @@ window.addEventListener('keydown', (e) => {
   const t = e.target as HTMLElement | null;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return;
   if (e.key === '`') { e.preventDefault(); openBrowser(); return; }
-  const i = ['1', '2', '3', '4'].indexOf(e.key);
+  const i = TABS.findIndex((_, n) => String(n + 1) === e.key);
   if (i >= 0) showTab(TABS[i].id);
 });
 
@@ -421,6 +460,7 @@ function applyValues(next: ParamValues, fromHost = false): void {
   if (!fromHost) synth.loadPreset(values);
   refreshLoops();
   refreshChannels(true);
+  refreshStates();
   setMaster(values.volume);
   redrawViz();
 }
@@ -643,6 +683,8 @@ $('#copy').addEventListener('click', async () => {
 
 let startTab = 'voice';
 try { startTab = localStorage.getItem('vector.tab') ?? startTab; } catch { /* ignore */ }
+refreshChannels(true);
+refreshStates();
 showTab(TABS.some((t) => t.id === startTab) ? startTab : 'voice');
 
 if (!plugin) {
@@ -681,11 +723,19 @@ if (!plugin) {
 
 // ---- stats / the live machine ---------------------------------------------
 
+// in the plugin the readout keeps one width however many digits the numbers have (padded, in a fixed box: style.css),
+// and the host's tempo has its own fixed box beside the stop button; a browser tab shows the plain text as before
+const fixedStats = document.documentElement.classList.contains('in-plugin');
+const pad = (n: number, w: number): string => (fixedStats ? String(n).padStart(w, '\u00a0') : String(n));
 const stats = $('#stats');
+const tempo = document.createElement('span');
+tempo.id = 'tempo'; tempo.className = 'muted';
+if (fixedStats) { $('#panic').before(tempo); stats.textContent = `${pad(0, 2)} voices · ${pad(0, 3)}% dsp`; }
 let lastPeak = 0;
 synth.onStats = (s: WorkletStats & { tempo?: number }) => {
-  const host = s.tempo ? ` · ${Math.round(s.tempo)} bpm` : '';
-  stats.textContent = `${s.voices} voices · ${Math.round(s.load * 100)}% dsp${host}`;
+  tempo.textContent = s.tempo ? `${pad(Math.round(s.tempo), 3)} bpm` : '';
+  const host = s.tempo && !fixedStats ? ` · ${Math.round(s.tempo)} bpm` : '';
+  stats.textContent = `${pad(s.voices, 2)} voices · ${pad(Math.round(s.load * 100), 3)}% dsp${host}`;
   const peak = Math.max(s.peakL, s.peakR);
   lastPeak = peak;
   scope.update(s.scope, peak);
@@ -723,6 +773,7 @@ if (plugin) {
       if (id === 'volume') setMaster(v);
     }
     refreshChannels();
+    refreshStates();
     refreshLoops();
     redrawViz();
   };
