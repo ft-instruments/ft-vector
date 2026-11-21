@@ -4,6 +4,15 @@ All notable changes to ft-vector. Format: [Keep a Changelog](https://keepachange
 
 ## Unreleased
 
+## [0.1.1] - 2026-11-21
+
+### Changed
+- The plugin window is now a wide 16:10 layout (1360 × 850) that fits the screen, scales to the window and never scrolls. A new window opens as large as fits, up to that size.
+- In the plugin the voice view is split into voice, chip and glass tabs (six tabs in all) instead of one long page.
+- Chord, arp, echo, plate, chorus and pump modules dim and show an OFF tag while they are doing nothing, so it is clear what is active.
+- The plugin header matches the other FT plugins, and the stats and tempo readouts are fixed width so digits changing no longer shift the layout.
+- Knob readouts are fixed width, so the knobs no longer move as values change.
+
 ## [0.1.0] - 2026-11-15
 
 First public release.
@@ -18,5 +27,6 @@ First public release.
 - Bundled fonts (Orbitron, Chakra Petch, Geist, Geist Mono, a small symbols fallback; SIL OFL): the UI and the plugin make no network connections.
 - AGPL-3.0 license, copyright and third-party notices.
 
-[Unreleased]: https://github.com/ft-instruments/ft-vector/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ft-instruments/ft-vector/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/ft-instruments/ft-vector/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/ft-instruments/ft-vector/releases/tag/v0.1.0
