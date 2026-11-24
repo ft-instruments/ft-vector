@@ -724,7 +724,7 @@ if (!plugin) {
 // ---- stats / the live machine ---------------------------------------------
 
 // in the plugin the readout keeps one width however many digits the numbers have (padded, in a fixed box: style.css),
-// and the host's tempo has its own fixed box beside the stop button; a browser tab shows the plain text as before
+// and the host's tempo has its own fixed box beside the stop button; a browser tab shows the plain text
 const fixedStats = document.documentElement.classList.contains('in-plugin');
 const pad = (n: number, w: number): string => (fixedStats ? String(n).padStart(w, '\u00a0') : String(n));
 const stats = $('#stats');
